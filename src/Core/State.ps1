@@ -10,6 +10,46 @@ function Get-TabulaStatePath {
     Join-Path $env:ProgramData 'Tabula\state.json'
 }
 
+function Assert-TabulaStateFolder {
+    # The state file is what an elevated Undo acts on, so only SYSTEM and Administrators may write to its folder.
+    # %ProgramData% lets standard users create files in new subfolders by default, so the folder gets an explicit
+    # ACL, and an existing one is refused if someone else owns it or can write to it. Skipped when a path override
+    # is set (tests); the override owner is responsible for it.
+    [CmdletBinding()]
+    param([switch]$Create, [string]$Folder)
+    if ($Folder) { $dir = $Folder }
+    else {
+        if ($script:TabulaStatePath) { return }
+        $dir = Split-Path -Parent (Get-TabulaStatePath)
+    }
+    $sid = { param($s) New-Object Security.Principal.SecurityIdentifier $s }
+    $system = & $sid 'S-1-5-18'
+    $admins = & $sid 'S-1-5-32-544'
+    $trusted = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')
+
+    if (-not (Test-Path -LiteralPath $dir)) {
+        if (-not $Create) { return }
+        $acl = New-Object Security.AccessControl.DirectorySecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        foreach ($s in $system, $admins) {
+            $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($s, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
+        }
+        [void][IO.Directory]::CreateDirectory($dir, $acl)
+        return
+    }
+
+    $acl = Get-Acl -LiteralPath $dir
+    $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+    $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    if ($trusted -notcontains $owner -and $owner -ne $me) { throw "state folder $dir is owned by $owner, not trusted" }
+    $writeBits = [int][Security.AccessControl.FileSystemRights]'WriteData, AppendData, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+    foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+        $who = $rule.IdentityReference.Value
+        if ($rule.AccessControlType -ne 'Allow' -or $trusted -contains $who -or $who -eq 'S-1-3-0' -or $who -eq $me) { continue }
+        if (([int]$rule.FileSystemRights -band $writeBits) -ne 0) { throw "state folder $dir grants write access to $who, not trusted" }
+    }
+}
+
 function ConvertTo-TabulaData {
     [CmdletBinding()]
     param($InputObject)
@@ -37,6 +77,7 @@ function Get-TabulaState {
     [CmdletBinding()]
     param()
     $path = Get-TabulaStatePath
+    Assert-TabulaStateFolder
     if (Test-Path -LiteralPath $path) {
         $raw = [IO.File]::ReadAllText($path)
         if ($raw.Trim()) {
@@ -54,6 +95,7 @@ function Save-TabulaState {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$State)
     $path = Get-TabulaStatePath
+    Assert-TabulaStateFolder -Create
     $dir = Split-Path -Parent $path
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
     $tmp = "$path.tmp"

@@ -41,6 +41,10 @@ function Test-TabulaProtected {
     foreach ($a in (Get-TabulaActions $Tweak)) {
         switch ($a['type']) {
             'registry' {
+                # Reject odd shapes (empty segments, forward slashes) instead of normalising them: the guard and
+                # the registry API must read the same path, or a crafted one could slip past the patterns.
+                if ($a['hive'] -notin 'HKCU', 'HKLM') { return "unsupported registry hive ($($a['hive']))" }
+                if (([string]$a['path']) -notmatch '^[^\\/]+(\\[^\\/]+)*$') { return "invalid registry path ($($a['path']))" }
                 $full = '{0}\{1}' -f $a['hive'], $a['path']
                 foreach ($p in $script:TabulaProtectedRegistry) {
                     if ($full -match $p) { return "touches protected registry path ($full)" }
@@ -50,9 +54,13 @@ function Test-TabulaProtected {
                 }
             }
             'service' {
+                if (([string]$a['name']) -notmatch '^[A-Za-z0-9_.-]+$') { return "invalid service name ($($a['name']))" }
                 if ($script:TabulaProtectedServices -contains [string]$a['name']) { return "touches protected service ($($a['name']))" }
             }
             'scheduledTask' {
+                # The ScheduledTasks cmdlets treat * ? [ ] as wildcards, which would let one action hit protected tasks.
+                if (([string]$a['path']) -notmatch '^\\([^\\/*?\[\]]+\\)*$') { return "invalid scheduled task path ($($a['path']))" }
+                if (-not [string]$a['name'] -or ([string]$a['name']) -match '[*?\[\]\\/]') { return "invalid scheduled task name ($($a['name']))" }
                 foreach ($p in $script:TabulaProtectedTaskPaths) {
                     if (([string]$a['path']).StartsWith($p, [StringComparison]::OrdinalIgnoreCase)) { return "touches protected scheduled task path ($($a['path']))" }
                 }
@@ -67,6 +75,19 @@ function Test-TabulaProtected {
         }
     }
     $null
+}
+
+function Test-TabulaPriorSafe {
+    # Undo trusts the state file, so recorded values go through the same guard before anything is restored.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Prior)
+    if ($Prior['type'] -eq 'powercfg') {
+        foreach ($k in 'activeScheme', 'guid') {
+            if ($Prior[$k] -and ([string]$Prior[$k]) -notmatch '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$') { return "invalid GUID in recorded state ($k)" }
+        }
+        return $null
+    }
+    Test-TabulaProtected -Tweak @{ actions = @($Prior) }
 }
 
 function Test-TabulaApplies {
@@ -384,7 +405,11 @@ function Invoke-TabulaTweakUndo {
     $priors = @($Change['prior'])
     $errors = New-Object System.Collections.Generic.List[string]
     for ($i = $priors.Count - 1; $i -ge 0; $i--) {
-        try { Restore-TabulaPriorState -Prior $priors[$i] }
+        try {
+            $unsafe = Test-TabulaPriorSafe -Prior $priors[$i]
+            if ($unsafe) { throw "refused to restore: $unsafe" }
+            Restore-TabulaPriorState -Prior $priors[$i]
+        }
         catch { $errors.Add($_.Exception.Message); Write-TabulaLog ('undo {0} step failed: {1}' -f $id, $_.Exception.Message) -Level ERROR }
     }
     if ($errors.Count -eq 0) {

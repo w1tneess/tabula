@@ -12,11 +12,35 @@ $script:TabulaWingetCodes = @{
 # Flags an app may add through extraArgs. --override is deliberately absent in v1. Each takes one value.
 $script:TabulaWingetExtraFlags = @('--architecture', '--locale', '--version')
 
+$script:TabulaWingetPathCache = $null
+
+function Test-TabulaMicrosoftSigned {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    try {
+        $s = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop
+        ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -match '(^|, )O=Microsoft Corporation(,|$)')
+    }
+    catch { $false }
+}
+
 function Get-TabulaWingetPath {
+    # Found through the installed App Installer package, not PATH: this runs elevated, and a winget.exe earlier on
+    # PATH (or in the current folder) would run with admin rights. The exe must also be signed by Microsoft.
+    # The per-user alias in WindowsApps cannot be signature-checked, so it is not used.
     [CmdletBinding()]
     param()
-    $c = Get-Command winget -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($c) { $c.Source } else { $null }
+    if ($script:TabulaWingetPathCache -and (Test-Path -LiteralPath $script:TabulaWingetPathCache)) { return $script:TabulaWingetPathCache }
+    $pkg = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -ErrorAction SilentlyContinue | Sort-Object { [version]$_.Version } -Descending | Select-Object -First 1
+    if (-not $pkg) { return $null }
+    $exe = Join-Path $pkg.InstallLocation 'winget.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { return $null }
+    if (-not (Test-TabulaMicrosoftSigned -Path $exe)) {
+        Write-TabulaLog "winget.exe at $exe is not signed by Microsoft. Not using it." -Level ERROR
+        return $null
+    }
+    $script:TabulaWingetPathCache = $exe
+    $exe
 }
 
 function Get-TabulaWingetVersion {

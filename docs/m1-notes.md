@@ -16,6 +16,20 @@ Core engine in `src/Core/`: logging, state (write-ahead, atomic save), detection
 - Real machine, read-only: detection (Windows 11 Pro 26H2, desktop, SSD, 16 GB, winget 1.29.380); dry run of five sample tweaks against the live registry, powercfg and service state (including a refusal of a Defender service tweak); `winget list` and `winget show` through `Install-TabulaApp -DryRun` for an installed, a missing and a non-existent package; `-Mode Export` (47 installed apps written to a scratch folder). No state file was created.
 - `-Mode Auto|Apps|Tweaks|Undo -DryRun` with the empty catalog exit 0; a real run without elevation exits 2.
 
+## Hardening after review (second pass)
+- **Process timeout:** killing winget left a child holding the output pipe, so a 2 s timeout took 29 s. It now kills the process tree and waits at most 5 s for output. Covered by a real-process test.
+- **Full paths only:** `Invoke-TabulaNative` refuses a bare program name. `powercfg.exe`, `sc.exe` and `taskkill.exe` come from the system folder.
+- **winget:** located through the installed App Installer package and checked for a valid Microsoft signature, not found on PATH. The per-user alias cannot be signature-checked and is not used. If App Installer is not found for the elevated user, apps are reported as failed with a clear reason.
+- **State folder:** `%ProgramData%\Tabula` is created with an explicit ACL (SYSTEM and Administrators only, no inheritance). An existing folder is refused if its owner is not SYSTEM, Administrators, TrustedInstaller or the current user, or if any other principal can write to it. Tested for the verification path only, using closed-ACL folders in the test drive. Creating the real folder with its ACL was not run (no elevated session here).
+- **Protected list:** registry paths with empty segments, forward slashes or an unsupported hive are rejected rather than normalised; service names must be plain; scheduled-task paths and names reject wildcards and malformed separators.
+- **Undo re-checks the state file:** every recorded prior state goes through the same guard before it is restored, and power GUIDs are validated.
+- Fixture test: JSON files go through `Get-TabulaConfig`, `Resolve-TabulaPlan` and a dry run, and an apply/undo on the scratch key, using real `ConvertFrom-Json` shapes.
+
+## Still open from the brief
+- The non-admin message does not print the exact relaunch command; it says to open an elevated PowerShell and run the same command again.
+- Config is not validated at runtime start (schema validation is M2).
+- The M1 acceptance row in `docs/08-build-test-plan.md` is not met: no VM, no real restore point, no elevated end-to-end run.
+
 ## Not tested
 - Any real tweak apply or undo outside the scratch key. No Windows Sandbox, Hyper-V or VirtualBox here, and the brief forbids running unverified tweaks on this PC.
 - A real `Checkpoint-Computer` (only mocked). Throttling, System Protection off, Home edition.
