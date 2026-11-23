@@ -110,13 +110,13 @@ function ConvertTo-TabulaSchemeGuid {
 
 function Get-TabulaPowerSchemeGuids {
     # GUID regex rather than text parsing, so the language of Windows does not matter.
-    $r = Invoke-TabulaNative -FilePath 'powercfg' -ArgumentList @('/list')
+    $r = Invoke-TabulaNative -FilePath (Get-TabulaSystemExe 'powercfg.exe') -ArgumentList @('/list')
     if ($r.ExitCode -ne 0) { throw "powercfg /list failed ($($r.ExitCode))" }
     @([regex]::Matches($r.Output, '[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}') | ForEach-Object { $_.Value.ToLower() })
 }
 
 function Get-TabulaActiveSchemeGuid {
-    $r = Invoke-TabulaNative -FilePath 'powercfg' -ArgumentList @('/getactivescheme')
+    $r = Invoke-TabulaNative -FilePath (Get-TabulaSystemExe 'powercfg.exe') -ArgumentList @('/getactivescheme')
     $m = [regex]::Match($r.Output, '[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}')
     if ($r.ExitCode -ne 0 -or -not $m.Success) { throw 'could not read the active power scheme' }
     $m.Value.ToLower()
@@ -133,7 +133,7 @@ function Get-TabulaHibernateEnabled {
 
 function Invoke-TabulaPowercfg {
     param([string[]]$ArgumentList)
-    $r = Invoke-TabulaNative -FilePath 'powercfg' -ArgumentList $ArgumentList
+    $r = Invoke-TabulaNative -FilePath (Get-TabulaSystemExe 'powercfg.exe') -ArgumentList $ArgumentList
     if ($r.ExitCode -ne 0) { throw ('powercfg {0} failed ({1}). {2}' -f ($ArgumentList -join ' '), $r.ExitCode, (Get-TabulaOutputTail $r.Output)) }
 }
 
@@ -160,7 +160,7 @@ function Set-TabulaServiceStart {
     param([string]$Name, [string]$StartType, [bool]$Delayed = $false)
     $t = ConvertTo-TabulaStartType $StartType
     if ($t -eq 'Automatic' -and $Delayed) {
-        $r = Invoke-TabulaNative -FilePath 'sc.exe' -ArgumentList @('config', $Name, 'start=', 'delayed-auto')
+        $r = Invoke-TabulaNative -FilePath (Get-TabulaSystemExe 'sc.exe') -ArgumentList @('config', $Name, 'start=', 'delayed-auto')
         if ($r.ExitCode -ne 0) { throw "sc config failed ($($r.ExitCode))" }
     }
     else { Set-Service -Name $Name -StartupType $t -ErrorAction Stop }

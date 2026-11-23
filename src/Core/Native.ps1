@@ -22,6 +22,8 @@ function Invoke-TabulaNative {
         [int]$TimeoutSec = 0,
         [switch]$Utf8
     )
+    # A bare name would be searched for on PATH and the current folder, from an elevated process.
+    if (-not [IO.Path]::IsPathRooted($FilePath)) { throw "Refusing to run '$FilePath': use a full path" }
     $argString = ConvertTo-TabulaArgString $ArgumentList
     Write-TabulaLog ('run: {0} {1}' -f $FilePath, $argString)
 
@@ -46,16 +48,33 @@ function Invoke-TabulaNative {
         $ms = if ($TimeoutSec -gt 0) { $TimeoutSec * 1000 } else { -1 }
         if (-not $p.WaitForExit($ms)) {
             $timedOut = $true
-            try { $p.Kill() } catch { Write-TabulaLog "could not kill timed-out process: $($_.Exception.Message)" -Level WARN }
+            Stop-TabulaProcessTree -ProcessId $p.Id
         }
         $p.WaitForExit()
+        # A grandchild that inherited the pipe (an installer) can hold it open after winget exits or is killed.
+        # Waiting forever would defeat the timeout, so give the readers a few seconds and move on.
+        $out = if ($outTask.Wait(5000)) { $outTask.Result } else { Write-TabulaLog 'output pipe still held by a child process, output dropped' -Level WARN; '' }
+        $err = if ($errTask.Wait(1000)) { $errTask.Result } else { '' }
         [pscustomobject]@{
             ExitCode = $p.ExitCode
-            Output   = ($outTask.Result + $errTask.Result)
+            Output   = ($out + $err)
             TimedOut = $timedOut
         }
     }
     finally { $p.Dispose() }
+}
+
+function Get-TabulaSystemExe {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Name)
+    Join-Path ([Environment]::SystemDirectory) $Name
+}
+
+function Stop-TabulaProcessTree {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][int]$ProcessId)
+    try { $null = & (Get-TabulaSystemExe 'taskkill.exe') /PID $ProcessId /T /F 2>$null }
+    catch { Write-TabulaLog "could not kill process tree: $($_.Exception.Message)" -Level WARN }
 }
 
 function Get-TabulaOutputTail {
