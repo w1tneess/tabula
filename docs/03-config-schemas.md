@@ -113,7 +113,8 @@ Fields:
 - `service`: `name`, `startType` (Automatic, Manual, Disabled). Prior start type recorded. Never stop or disable services in the protected list.
 - `scheduledTask`: `path`, `name`, `state` (Enabled, Disabled). Prior state recorded.
 - `powercfg`: structured, e.g. `{ "type": "powercfg", "op": "setActiveScheme", "scheme": "SCHEME_BALANCED" }`. Allowed ops: `setActiveScheme`, `duplicateScheme` (with GUID), `hibernate` (on/off), `setValue` (scheme, subgroup, setting, ac/dc, value). Record prior active scheme / values.
-- `function`: `name` from an allow-list in the engine for the rare thing that cannot be expressed as data. Must expose `Apply`, `Undo`, `Detect`.
+  As built in M1: `setActiveScheme` takes `scheme` (an alias such as `SCHEME_BALANCED`, `SCHEME_MIN`, `SCHEME_MAX`, or a GUID); `hibernate` takes `value` `"on"` or `"off"`; `duplicateScheme` takes `scheme` (source GUID) and `guid` (the GUID for the copy, fixed so the action is idempotent), and undo deletes the copy only if Tabula created it. `setValue` is not implemented and is refused.
+- `function`: `name` from an allow-list in the engine for the rare thing that cannot be expressed as data. As built in M1 it exposes `Capture` (returns prior state), `Apply`, `Undo` (receives the prior state) and `Detect` (returns `$true` when already set). The allow-list is empty in v1.
 
 Registry writes to HKLM need admin. HKCU writes made by an elevated process apply to the elevated user. If the admin account differs from the logged-in standard user, the tweak must target the right user hive. v1 assumes the user runs Tabula as themselves with elevation, and logs a warning if the elevated user is not the interactive user.
 

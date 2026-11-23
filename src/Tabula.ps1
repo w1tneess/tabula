@@ -23,6 +23,7 @@ if (-not (Get-Variable -Name TabulaBuild -Scope Script -ErrorAction SilentlyCont
     # Dev run from src/: load the modules from disk instead of a bundle.
     $script:TabulaBuild = @{ Version = 'dev'; Built = 'n/a'; Commit = 'n/a' }
     $srcRoot = Split-Path -Parent $PSCommandPath
+    $script:TabulaRoot = Split-Path -Parent $srcRoot
     foreach ($file in (Get-ChildItem (Join-Path $srcRoot 'Core') -Filter *.ps1 | Sort-Object Name)) { . $file.FullName }
     . (Join-Path $srcRoot 'UI\UI.ps1')
 }
@@ -32,5 +33,8 @@ if ($Version) {
     return
 }
 
-# M0: dispatch exists, engines arrive in M1 (CLI) and M3 (GUI).
-Write-Output ('Tabula {0}. Mode {1} is not implemented yet.' -f $script:TabulaBuild.Version, $Mode)
+$exitCode = Invoke-TabulaMain -Mode $Mode -Preset $Preset -DryRun:$DryRun -NoRestorePoint:$NoRestorePoint `
+    -Apps $Apps -Skip $Skip -Yes:$Yes -IncludeHighRisk:$IncludeHighRisk -LogPath $LogPath
+
+# `exit` would close the user's console when this runs through iex, so only exit when run as a file.
+if ($PSCommandPath) { exit $exitCode } else { $global:LASTEXITCODE = $exitCode }

@@ -1,4 +1,15 @@
 {
   "schemaVersion": 1,
-  "presets": []
+  "presets": [
+    {
+      "id": "Standard",
+      "name": "Standard",
+      "description": "Safe defaults for a daily-driver PC.",
+      "apps": "defaultSelected",
+      "tweaks": "defaultOn",
+      "overrides": {
+        "laptop": { "excludeTweaks": ["ultimate-performance-plan"] }
+      }
+    }
+  ]
 }

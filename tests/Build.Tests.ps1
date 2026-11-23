@@ -24,12 +24,20 @@ Describe 'M0 build' {
 
     It 'runs through iex' {
         $out = & powershell.exe -NoProfile -Command "Get-Content -Raw '$dist' | Invoke-Expression"
-        ($out | Out-String) | Should -Match 'Mode Gui is not implemented yet'
+        ($out | Out-String) | Should -Match 'The GUI is not built yet'
     }
 
-    It 'accepts parameters through a script block' {
-        $cmd = "& ([scriptblock]::Create((Get-Content -Raw '$dist'))) -Mode Auto -DryRun"
+    It 'accepts parameters through a script block, and a dry run exits 0' {
+        $log = Join-Path $TestDrive 'dry.log'
+        $cmd = "& ([scriptblock]::Create((Get-Content -Raw '$dist'))) -Mode Auto -DryRun -LogPath '$log'; exit `$LASTEXITCODE"
         $out = & powershell.exe -NoProfile -Command $cmd
-        ($out | Out-String) | Should -Match 'Mode Auto is not implemented yet'
+        $LASTEXITCODE | Should -Be 0
+        ($out | Out-String) | Should -Match 'mode Auto, dry run'
+    }
+
+    It 'returns exit code 2 for a real run without elevation' -Skip:(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        $log = Join-Path $TestDrive 'real.log'
+        & powershell.exe -NoProfile -File $dist -Mode Auto -Yes -LogPath $log | Out-Null
+        $LASTEXITCODE | Should -Be 2
     }
 }
