@@ -75,6 +75,22 @@ Describe 'State folder trust' {
         { Assert-TabulaStateFolder -Folder $dir } | Should -Not -Throw
     }
 
+    It 'fails closed when an elevated caller cannot read the ACL' {
+        Mock Get-Acl { throw (New-Object UnauthorizedAccessException 'denied') }
+        Mock Test-TabulaElevated { $true }
+        $dir = Join-Path $TestDrive 'locked-admin'
+        New-ClosedFolder $dir
+        { Assert-TabulaStateFolder -Folder $dir } | Should -Throw '*not trusted*'
+    }
+
+    It 'fails closed when writing and the ACL cannot be read' {
+        Mock Get-Acl { throw (New-Object UnauthorizedAccessException 'denied') }
+        Mock Test-TabulaElevated { $false }
+        $dir = Join-Path $TestDrive 'locked-write'
+        New-ClosedFolder $dir
+        { Assert-TabulaStateFolder -Folder $dir -Create } | Should -Throw '*not trusted*'
+    }
+
     It 'refuses a folder that is a junction' {
         $target = Join-Path $TestDrive 'target'
         New-ClosedFolder $target

@@ -10,6 +10,12 @@ function Get-TabulaStatePath {
     Join-Path $env:ProgramData 'Tabula\state.json'
 }
 
+function Test-TabulaElevated {
+    [CmdletBinding()]
+    param()
+    ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 function Assert-TabulaStateFolder {
     # The state file is what an elevated Undo acts on, so only SYSTEM and Administrators may write to its folder.
     # %ProgramData% lets standard users create files in new subfolders by default, so the folder gets an explicit
@@ -44,8 +50,13 @@ function Assert-TabulaStateFolder {
 
     # A non-elevated caller cannot even read an admin-only ACL (a dry run, for example). That is the intended lock,
     # so there is nothing to verify and nothing it could write.
+    # Fail closed for anything that writes (-Create) or runs elevated: an administrator that cannot read the ACL
+    # means the folder is not set up the way Tabula makes it.
     try { $acl = Get-Acl -LiteralPath $dir }
-    catch [UnauthorizedAccessException] { return }
+    catch [UnauthorizedAccessException] {
+        if ($Create -or (Test-TabulaElevated)) { throw "state folder $dir ACL is unreadable, not trusted" }
+        return
+    }
     $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
     $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     if ($trusted -notcontains $owner -and $owner -ne $me) { throw "state folder $dir is owned by $owner, not trusted" }
