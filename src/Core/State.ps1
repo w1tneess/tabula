@@ -34,11 +34,18 @@ function Assert-TabulaStateFolder {
         foreach ($s in $system, $admins) {
             $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($s, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
         }
+        # CreateDirectory does not fail if someone created the folder a moment earlier, and then it applies no ACL.
+        # So fall through to the same verification an existing folder gets instead of trusting the call.
         [void][IO.Directory]::CreateDirectory($dir, $acl)
-        return
     }
 
-    $acl = Get-Acl -LiteralPath $dir
+    # A junction or symlink here could point the state file (and an elevated Undo) somewhere else.
+    if (([IO.File]::GetAttributes($dir) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "state folder $dir is a reparse point, not trusted" }
+
+    # A non-elevated caller cannot even read an admin-only ACL (a dry run, for example). That is the intended lock,
+    # so there is nothing to verify and nothing it could write.
+    try { $acl = Get-Acl -LiteralPath $dir }
+    catch [UnauthorizedAccessException] { return }
     $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
     $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     if ($trusted -notcontains $owner -and $owner -ne $me) { throw "state folder $dir is owned by $owner, not trusted" }
@@ -78,7 +85,8 @@ function Get-TabulaState {
     param()
     $path = Get-TabulaStatePath
     Assert-TabulaStateFolder
-    if (Test-Path -LiteralPath $path) {
+    # File.Exists is quiet when access is denied (a non-elevated dry run); Test-Path writes an error.
+    if ([IO.File]::Exists($path)) {
         $raw = [IO.File]::ReadAllText($path)
         if ($raw.Trim()) {
             # An unreadable state file is the undo record. Fail loudly rather than start a new one over it.

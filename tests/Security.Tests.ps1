@@ -68,6 +68,21 @@ Describe 'State folder trust' {
         { Assert-TabulaStateFolder -Folder $dir } | Should -Throw '*not trusted*'
     }
 
+    It 'does not fail for a caller who cannot read the ACL' {
+        Mock Get-Acl { throw (New-Object UnauthorizedAccessException 'Attempted to perform an unauthorized operation.') }
+        $dir = Join-Path $TestDrive 'locked'
+        New-ClosedFolder $dir
+        { Assert-TabulaStateFolder -Folder $dir } | Should -Not -Throw
+    }
+
+    It 'refuses a folder that is a junction' {
+        $target = Join-Path $TestDrive 'target'
+        New-ClosedFolder $target
+        $link = Join-Path $TestDrive 'link'
+        $null = cmd.exe /c mklink /J "`"$link`"" "`"$target`""
+        { Assert-TabulaStateFolder -Folder $link } | Should -Throw '*reparse point*'
+    }
+
     It 'allows read-only access for Users' {
         $dir = Join-Path $TestDrive 'readable'
         New-ClosedFolder $dir

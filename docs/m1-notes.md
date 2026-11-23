@@ -25,10 +25,22 @@ Core engine in `src/Core/`: logging, state (write-ahead, atomic save), detection
 - **Undo re-checks the state file:** every recorded prior state goes through the same guard before it is restored, and power GUIDs are validated.
 - Fixture test: JSON files go through `Get-TabulaConfig`, `Resolve-TabulaPlan` and a dry run, and an apply/undo on the scratch key, using real `ConvertFrom-Json` shapes.
 
+## Elevated run on this PC (Windows 11 Pro build 26300, user approved UAC)
+One scratch tweak (`HKCU:\Software\TabulaTest\Elev\Deep`), no catalog tweak, no app. Run once.
+- `%ProgramData%\Tabula` did not exist; the engine created it. Owner `BUILTIN\Administrators`, two non-inherited ACEs (SYSTEM and Administrators, FullControl). The trust re-check passed.
+- Real restore point created through `Checkpoint-Computer` (sequence 35, "Tabula 20261124-010338"). System Protection was already on; `AllowEnable` was off. This restore point now exists on this PC.
+- Apply recorded the run (`complete`, restore point recorded), wrote the value, `-Mode Undo` equivalent reverted it, and the scratch key (including the keys the tweak created) was gone afterwards.
+- `dist\tabula.ps1 -Mode Auto -Yes` and `-Mode Undo` elevated, empty catalog: both exit 0 ("Nothing to do", "Nothing to undo"). winget was located through the App Installer package.
+- Found because of it: once the folder is admin-only, a non-elevated caller cannot read its ACL or the file. A non-elevated `-DryRun` and `-Mode Undo -DryRun` hit that and threw. Fixed: such a caller skips the check and sees no history (`File.Exists` instead of `Test-Path`, so there is no error output). Rechecked non-elevated, exit 0.
+- Review follow-up: the folder-creation path no longer returns early; a folder created by someone else a moment earlier gets the same owner and ACL verification, and a junction or symlink is refused.
+- `Get-ComputerRestorePoint` returns nothing for a non-elevated caller, so restore point listing is only meaningful elevated.
+
+Still not covered: Windows Home, restore point throttling, System Protection off, a real winget install, a real catalog tweak.
+
 ## Still open from the brief
 - The non-admin message does not print the exact relaunch command; it says to open an elevated PowerShell and run the same command again.
 - Config is not validated at runtime start (schema validation is M2).
-- The M1 acceptance row in `docs/08-build-test-plan.md` is not met: no VM, no real restore point, no elevated end-to-end run.
+- The M1 acceptance row in `docs/08-build-test-plan.md` is partly met: a real restore point, state folder and apply/undo round trip ran elevated on this PC, but only with a scratch tweak, and not on a VM or a second Windows version.
 
 ## Not tested
 - Any real tweak apply or undo outside the scratch key. No Windows Sandbox, Hyper-V or VirtualBox here, and the brief forbids running unverified tweaks on this PC.
