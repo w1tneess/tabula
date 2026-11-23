@@ -1,0 +1,35 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dev tools
+        shell: powershell
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Force -Scope CurrentUser -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Build
+        shell: powershell
+        run: ./build.ps1
+      - name: Lint
+        shell: powershell
+        run: |
+          $r = Invoke-ScriptAnalyzer -Path src -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r | Format-Table -AutoSize
+          if ($r | Where-Object { $_.Severity -in 'Error', 'ParseError' }) { exit 1 }
+      - name: Test
+        shell: powershell
+        run: |
+          $c = New-PesterConfiguration
+          $c.Run.Path = './tests'
+          $c.Run.Exit = $true
+          Invoke-Pester -Configuration $c
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

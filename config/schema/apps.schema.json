@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tabula apps.json (stub, completed in M2)",
+  "type": "object",
+  "required": ["schemaVersion", "apps"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "apps": { "type": "array" }
+  }
+}
