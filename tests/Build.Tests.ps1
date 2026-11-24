@@ -19,7 +19,7 @@ Describe 'M0 build' {
 
     It 'prints its version from a fresh Windows PowerShell 5.1' {
         $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $dist -Version
-        ($out | Out-String) | Should -Match '^Tabula 0\.0\.1 \(built .+, commit .+\)'
+        ($out | Out-String) | Should -Match '^Tabula 0\.1\.0 \(built .+, commit .+\)'
     }
 
     It 'runs through iex (GUI mode, closes itself)' {
