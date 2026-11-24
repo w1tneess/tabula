@@ -26,4 +26,41 @@ CI checks syntax and logic, not Windows behaviour.
 
 `MASTER_PROMPT.md` and `docs/` hold the full brief. `ANALYSIS.md` records the review of that brief and its open points.
 
-Install one-liner and a "what it changes" table arrive with M6.
+## Install
+
+Tabula is one file, attached to each GitHub release together with its SHA-256. There is no release yet: the commands below show the intended form, and the repository name is assumed to be `advaita974/tabula`.
+
+Look first, run second. Download, check the hash, preview with a dry run, then run it:
+
+```powershell
+$u = 'https://github.com/advaita974/tabula/releases/latest/download'
+Invoke-WebRequest "$u/tabula.ps1" -OutFile tabula.ps1
+Invoke-WebRequest "$u/tabula.ps1.sha256" -OutFile tabula.ps1.sha256
+(Get-FileHash tabula.ps1 -Algorithm SHA256).Hash.ToLower() -eq (Get-Content tabula.ps1.sha256).Split(' ')[0]   # must print True
+powershell -STA -ExecutionPolicy Bypass -File .\tabula.ps1 -Mode Auto -DryRun
+powershell -STA -ExecutionPolicy Bypass -File .\tabula.ps1
+```
+
+One-liner, which runs the script without reading it first:
+
+```powershell
+irm https://github.com/advaita974/tabula/releases/latest/download/tabula.ps1 | iex
+```
+
+Changing the PC needs an elevated Windows PowerShell. A dry run and the window's read-only views do not.
+
+## What it changes
+
+Everything is data in `config/`. A run applies, in this order: a restore point, the verified tweaks in the chosen preset, then the ticked apps through winget from official sources. Every change is recorded before it is made, so **Undo last run** puts tweaks back (installed apps stay installed).
+
+Tweaks verified so far (Microsoft documents the key, and each was applied and undone on Windows 11 build 26100 in Windows Sandbox; see `docs/tweaks-verification.md`):
+
+| Tweak | Registry | On by default | Note |
+|---|---|---|---|
+| No activity history upload | `HKLM\SOFTWARE\Policies\Microsoft\Windows\System`: `EnableActivityFeed`, `PublishUserActivities`, `UploadUserActivities` = 0 | yes | Documented for Pro, Enterprise and Education, not Home. |
+| Lowest telemetry level for this edition | `HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection`: `AllowTelemetry` = 0 | yes | Only Enterprise and Education honour 0. On Home and Pro it equals the required minimum. |
+| Dark theme | `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`: `AppsUseLightTheme`, `SystemUsesLightTheme` = 0 | no | Per user. |
+
+The other 18 tweaks are unverified, off, and held back from every run. Tabula never touches the protected list in `docs/07-tweaks-catalog.md` (Defender, Windows Update service enablement, firewall, Store, UAC, boot settings, activation).
+
+Not tested yet: Windows 10, Home and Pro, laptops and other hardware, and display scaling above 100 %.
