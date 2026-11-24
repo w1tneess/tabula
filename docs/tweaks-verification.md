@@ -45,3 +45,20 @@ Status 2026-11-24: **no tweak is verified.** There is no VM or Windows Sandbox a
 - **disable-activity-history, telemetry-minimum, delivery-optimization-off** write to HKLM and need an elevated run. Policy keys under `Policies\` may not take effect on Home. Unchecked.
 - **hibernate-off** reads the current state from `HibernateEnabled` with a fallback to `HibernateEnabledDefault`, because the first is absent on this PC. Unverified.
 - To verify a tweak, in a VM: apply, check the effect, undo, check the revert, record the build in `testedBuilds`, then set `verified: true` and `defaultOn` per `intendedDefaultOn`.
+
+## Windows Sandbox run, 2026-11-24 (build 26100, Windows 11 Enterprise 24H2, clean image)
+Script: `sandbox/verify-tweaks.ps1`. Raw output: `docs/sandbox-results/verify-tweaks.json`. For each tweak the real engine read the state, applied it, read the state, undid it, read the state. **This checks the apply and undo mechanics and that the key exists on a clean build. It does not check that Windows behaves as the description says, and no source was consulted, so `verified` stays `false` for every tweak.**
+
+| Result | Tweaks |
+|---|---|
+| Applied, state became Set, undo reverted, state back to Unset | file-extensions, hidden-files, classic-context-menu, taskbar-left, dark-mode, this-pc-launch, disable-search-web, disable-suggestions, disable-activity-history, telemetry-minimum, disable-tailored-experiences, disable-game-dvr, startup-delay, delivery-optimization-off, visual-effects-balanced, hide-task-view  |
+| **Failed**: Windows refused the write ("unauthorized operation"), engine rolled back cleanly | hide-widgets (`TaskbarDa` is protected on this build; the catalog already warned newer builds may block it) |
+| Inconclusive: already Set before the test | disable-ad-id |
+| Inconclusive: not applicable in a virtual machine | ultimate-performance-plan, balanced-plan, hibernate-off (need real hardware) |
+
+Counts from the json: 16 pass, 4 inconclusive, 1 error (the error is hide-widgets, a real failure; the script mislabelled it because of a strict-mode bug in the script, since fixed).
+
+Still to do before any `verified: true`: check each key against Microsoft or another reliable source, observe the visible effect (for example Explorer actually showing extensions), and test the power-plan tweaks on real hardware. Nothing was changed in `config/tweaks.json`.
+
+## Apps on a clean machine (same Sandbox run, after the documented winget bootstrap)
+A dry run against real winget on the clean image resolved all 17 applicable app IDs (`winget show`): 17 would install, 1 skipped (Windows Terminal, Windows 10 only). `docs/sandbox-results/probe.txt` has the probe.

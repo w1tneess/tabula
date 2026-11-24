@@ -16,4 +16,4 @@ It builds `dist/tabula.ps1`, writes a `.wsb` file and opens the sandbox. `dist` 
 ## Limits
 - One image: the Windows 11 build of this PC. It cannot test Windows 10, other editions, a laptop, or 125 to 200 % scaling on a second monitor.
 - It may not have winget registered. That is itself a useful result: record it.
-- Status: the launcher and the `.wsb` file were generated and parsed here. Windows Sandbox is not enabled on this PC, so nothing has run inside it yet.
+- Status: ran on 2026-11-24 (build 26100). Use `-Winget` to bootstrap winget with Microsoft's documented method and `-Verify` to run `verify-tweaks.ps1`. Results: `docs/sandbox-results/` and `docs/tweaks-verification.md`.

@@ -137,6 +137,7 @@ function Install-TabulaApp {
         return New-TabulaResult -Kind app -Id $id -Name $name -Status skipped -Reason ('manual install: ' + $App['officialUrl'])
     }
     $winget = Get-TabulaWingetPath
+    if (-not $winget -and $DryRun) { return New-TabulaResult -Kind app -Id $id -Name $name -Status dryrun -Reason 'winget not found; a real run would try to register App Installer first' }
     if (-not $winget) { return New-TabulaResult -Kind app -Id $id -Name $name -Status failed -Reason 'winget is not available' }
 
     try {

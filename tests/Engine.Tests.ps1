@@ -197,6 +197,12 @@ Describe 'Winget wrapper' {
             $r.Status | Should -Be 'failed'
             $r.Reason | Should -Match '0x00000005'
         }
+        It 'dry run without winget says what a real run would do instead of failing every app' {
+            Mock Get-TabulaWingetPath { $null }
+            $r = Install-TabulaApp -App $script:app -DryRun
+            $r.Status | Should -Be 'dryrun'
+            $r.Reason | Should -Match 'register App Installer'
+        }
         It 'reports a timeout as a failure' {
             $script:timedOut = $true
             (Install-TabulaApp -App $script:app).Reason | Should -Match 'timed out'

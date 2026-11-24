@@ -1,0 +1,7 @@
+﻿os: Microsoft Windows 11 Enterprise build 26100
+user: WDAGUtilityAccount
+app installer: 
+edition: 4
+winget bootstrap: ok
+app installer after bootstrap: 
+dry run exit code: 0
