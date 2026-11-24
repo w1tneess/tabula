@@ -87,7 +87,8 @@ function New-TabulaWingetInstallArgs {
     $id = [string]$App['wingetId']
     if ($id -notmatch '^[A-Za-z0-9][A-Za-z0-9._+-]*$') { throw "Invalid winget ID '$id'" }
     $a = New-Object System.Collections.Generic.List[string]
-    $a.AddRange([string[]]@('install', '--id', $id, '-e', '--accept-package-agreements', '--accept-source-agreements', '--silent'))
+    # Pinned to the winget source: with another source unreachable (msstore in Windows Sandbox) winget fails with 0x8A15003B and asks for --source.
+    $a.AddRange([string[]]@('install', '--id', $id, '-e', '--source', 'winget', '--accept-package-agreements', '--accept-source-agreements', '--silent'))
     # --scope only when the app asks for it: not every installer supports machine scope.
     if ($App['scope']) {
         if ($App['scope'] -notin 'machine', 'user') { throw "Invalid scope '$($App['scope'])'" }
@@ -148,7 +149,7 @@ function Install-TabulaApp {
         }
         if ($DryRun) {
             # Availability check only. Nothing is installed.
-            $show = Invoke-TabulaNative -FilePath $winget -ArgumentList @('show', '--id', $wingetId, '-e', '--accept-source-agreements') -TimeoutSec 120 -Utf8
+            $show = Invoke-TabulaNative -FilePath $winget -ArgumentList @('show', '--id', $wingetId, '-e', '--source', 'winget', '--accept-source-agreements') -TimeoutSec 120 -Utf8
             $detail = 'winget ' + (ConvertTo-TabulaArgString $installArgs)
             $reason = if ($show.ExitCode -eq 0) { 'would install' } else { 'would install, but winget show did not find the package' }
             return New-TabulaResult -Kind app -Id $id -Name $name -Status dryrun -Reason $reason -Detail $detail

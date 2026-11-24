@@ -135,7 +135,7 @@ Describe 'Winget wrapper' {
 
     It 'builds the install command from data, with scope only when asked' {
         $app = @{ id = 'x'; wingetId = 'Git.Git'; source = 'winget' }
-        (New-TabulaWingetInstallArgs -App $app) -join ' ' | Should -Be 'install --id Git.Git -e --accept-package-agreements --accept-source-agreements --silent'
+        (New-TabulaWingetInstallArgs -App $app) -join ' ' | Should -Be 'install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements --silent'
         $app['scope'] = 'machine'
         (New-TabulaWingetInstallArgs -App $app) -join ' ' | Should -Match '--scope machine$'
     }

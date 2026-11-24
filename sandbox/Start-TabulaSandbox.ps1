@@ -1,8 +1,9 @@
 # Builds Tabula and opens it in a disposable Windows Sandbox. Run from the repo root in Windows PowerShell 5.1.
 # -NoLaunch writes the .wsb file and stops (used by the tests).
 [CmdletBinding()]
-param([switch]$NoLaunch, [switch]$Winget, [switch]$Verify)
+param([switch]$NoLaunch, [switch]$Winget, [switch]$Verify, [switch]$Gui)
 $ErrorActionPreference = 'Stop'
+if ($Gui) { $Winget = $true }   # real installs need winget
 $repo = Split-Path -Parent $PSScriptRoot
 & (Join-Path $repo 'build.ps1') | Out-Null
 $outDir = Join-Path $repo 'sandbox-out'
@@ -23,7 +24,7 @@ $xml = @(
     (& $map (Join-Path $repo 'config') 'C:\TabulaRepo\config' 'true')
     (& $map $outDir 'C:\Out' 'false')
     '</MappedFolders>'
-    ('<LogonCommand><Command>powershell.exe -NoExit -ExecutionPolicy Bypass -File C:\TabulaSetup\inside.ps1' + $(if ($Winget) { ' -Winget' }) + $(if ($Verify) { ' -Verify' }) + '</Command></LogonCommand>')
+    ('<LogonCommand><Command>powershell.exe -NoExit -ExecutionPolicy Bypass -File C:\TabulaSetup\inside.ps1' + $(if ($Winget) { ' -Winget' }) + $(if ($Verify) { ' -Verify' }) + $(if ($Gui) { ' -Gui' }) + '</Command></LogonCommand>')
     '</Configuration>'
 ) -join "`n"
 $wsb = Join-Path $env:TEMP 'tabula.wsb'

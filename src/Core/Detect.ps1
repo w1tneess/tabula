@@ -66,8 +66,8 @@ function Get-TabulaSystemDisk {
     # plain disks; Storage Spaces can break it, in which case the caller gets 'unknown'.
     [CmdletBinding()]
     param()
-    $part = Get-Partition -DriveLetter C
-    $pd = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq [string]$part.DiskNumber } | Select-Object -First 1
+    $part = Get-Partition -DriveLetter C -ErrorAction Stop
+    $pd = Get-PhysicalDisk -ErrorAction Stop | Where-Object { $_.DeviceId -eq [string]$part.DiskNumber } | Select-Object -First 1
     if (-not $pd) { throw 'no physical disk matches the system partition' }
     [pscustomobject]@{ MediaType = [string]$pd.MediaType; BusType = [string]$pd.BusType }
 }

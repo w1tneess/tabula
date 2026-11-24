@@ -983,12 +983,14 @@ function Show-TabulaWindow {
                     param($r, $err)
                     $u = $script:TabulaUi
                     $prof = if ($r) { $r | Select-Object -Last 1 } else { $null }
-                    if ($err -or -not $prof) {
+                    if (-not $prof) {
                         Set-TabulaStatus 'Could not detect this machine.'; Write-TabulaLog "detection failed: $err" -Level ERROR
                         foreach ($row in $u.AppRows) { if ($row.Status -eq 'Checking') { $row.Status = 'Unknown'; $row.StatusKind = 'warn' } }
                         return
                     }
                     $u.Profile = $prof
+                    # A probe that failed (a virtual disk, say) is logged by the engine and must not discard the profile.
+                    if ($err) { Write-TabulaLog "detection reported a non-fatal error: $err" -Level WARN }
                     $dot = ' ' + [string][char]0x00B7 + ' '
                     $summary = (Get-TabulaProfileSummary -Profile $prof) -replace ' \| ', $dot
                     $u.MachineText.Text = $summary
