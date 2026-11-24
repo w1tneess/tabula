@@ -28,12 +28,12 @@ CI checks syntax and logic, not Windows behaviour.
 
 ## Install
 
-Tabula is one file, attached to each GitHub release together with its SHA-256. There is no release yet: the commands below show the intended form, and the repository name is assumed to be `advaita974/tabula`.
+Tabula is one file, attached to each GitHub release together with its SHA-256. Releases are at `github.com/w1tneess/tabula/releases`. The repository is private for now, so these commands only work for people who can see it until it is made public.
 
 Look first, run second. Download, check the hash, preview with a dry run, then run it:
 
 ```powershell
-$u = 'https://github.com/advaita974/tabula/releases/latest/download'
+$u = 'https://github.com/w1tneess/tabula/releases/latest/download'
 Invoke-WebRequest "$u/tabula.ps1" -OutFile tabula.ps1
 Invoke-WebRequest "$u/tabula.ps1.sha256" -OutFile tabula.ps1.sha256
 (Get-FileHash tabula.ps1 -Algorithm SHA256).Hash.ToLower() -eq (Get-Content tabula.ps1.sha256).Split(' ')[0]   # must print True
@@ -44,7 +44,7 @@ powershell -STA -ExecutionPolicy Bypass -File .\tabula.ps1
 One-liner, which runs the script without reading it first:
 
 ```powershell
-irm https://github.com/advaita974/tabula/releases/latest/download/tabula.ps1 | iex
+irm https://github.com/w1tneess/tabula/releases/latest/download/tabula.ps1 | iex
 ```
 
 Changing the PC needs an elevated Windows PowerShell. A dry run and the window's read-only views do not.
