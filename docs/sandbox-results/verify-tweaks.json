@@ -239,8 +239,9 @@
         "apply":  "failed",
         "applyReason":  "Exception calling \"SetValue\" with \"3\" argument(s): \"Attempted to perform an unauthorized operation.\"",
         "afterApply":  "Unset",
-        "result":  "error",
-        "note":  "The property \u0027Status\u0027 cannot be found on this object. Verify that the property exists."
+        "undo":  "",
+        "afterUndo":  "Unset",
+        "result":  "fail"
     },
     {
         "id":  "hide-task-view",

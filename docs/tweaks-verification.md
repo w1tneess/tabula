@@ -62,3 +62,24 @@ Still to do before any `verified: true`: check each key against Microsoft or ano
 
 ## Apps on a clean machine (same Sandbox run, after the documented winget bootstrap)
 A dry run against real winget on the clean image resolved all 17 applicable app IDs (`winget show`): 17 would install, 1 skipped (Windows Terminal, Windows 10 only). `docs/sandbox-results/probe.txt` has the probe.
+
+## Source check, 2026-11-24
+Searched Microsoft Learn (Policy CSP pages, "Reference for Windows 11 and Windows 10 settings", Win32 docs) for each key. "Documented" means Microsoft states the registry key, the value and what it does. The Sandbox run was repeated after the two corrections below: 16 pass, 4 inconclusive, 1 fail (hide-widgets), now labelled correctly.
+
+| Tweak | Microsoft source | Finding |
+|---|---|---|
+| dark-mode | Reference for Windows 11 and 10 settings, Personalization - colors | **Documented**: `AppsUseLightTheme` and `SystemUsesLightTheme`, REG_DWORD, 0/1. |
+| disable-activity-history | Policy CSP - Privacy | **Documented**: `EnableActivityFeed`, `PublishUserActivities`, `UploadUserActivities` under `HKLM\Software\Policies\Microsoft\Windows\System`, 0 = disabled. The CSP lists Pro, Enterprise, Education, not Home. |
+| telemetry-minimum | Policy CSP - System, "Manage connections" | **Documented**: `AllowTelemetry` under `HKLM\...\Policies\Microsoft\Windows\DataCollection`. 0 (Security) only takes effect on Enterprise, Education and Server; on other editions it equals 1. |
+| taskbar-left, hide-task-view | Reference for Windows 11 settings, Taskbar | Meaning documented (`TaskbarAl` 0 = left, `ShowTaskViewButton` 0/1; policy `HideTaskViewButton` exists). The page lists the values as REG_SZ under a differently laid out path than the DWord we write, so type and location are not confirmed. |
+| visual-effects-balanced | `ANIMATIONINFO` / `SPI_SETANIMATION` | The effect (minimize and restore animation) is documented for the API. The `WindowMetrics\MinAnimate` registry value is not documented. |
+| delivery-optimization-off | Policy CSP - DeliveryOptimization | `DODownloadMode` 0 = HTTP only, no peering is documented, but under `HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization`. **The catalog used another path. Corrected.** |
+| disable-search-web | Policy CSP - ADMX_WindowsExplorer | `DisableSearchBoxSuggestions` is documented for the **File Explorer** search box (recent searches), not Start web results. **Name and description corrected to what Microsoft documents.** A real "no web results in Start" tweak needs a different, documented setting and is not in the catalog. |
+| hide-widgets | Reference for Windows 11 settings; Taskbar policy settings | `TaskbarDa` is documented, but Windows 24H2 refused the write in the Sandbox. The documented route is the "Allow widgets" policy (`AllowNewsAndInterests`), not tried. |
+| disable-ad-id | Policy CSP - Privacy | Microsoft documents the policy (`HKLM\Software\Policies\Microsoft\Windows\AdvertisingInfo\DisabledByGroupPolicy`), not the per-user `Enabled` value the tweak writes. |
+| disable-tailored-experiences | Policy CSP - Experience, "Manage connections" | Microsoft documents the policy (`HKCU\Software\Policies\Microsoft\Windows\CloudContent\DisableTailoredExperiencesWithDiagnosticData` = 1), not the Settings toggle value the tweak writes. |
+| disable-game-dvr | Policy CSP - ApplicationManagement | Microsoft documents the `AllowGameDVR` policy, not the `GameDVR_Enabled` and `AppCaptureEnabled` user values the tweak writes. |
+| file-extensions, hidden-files, this-pc-launch, classic-context-menu, startup-delay, disable-suggestions | none found | No Microsoft page found for these values. They are widely used, but that is not a Microsoft source. |
+| ultimate-performance-plan, balanced-plan, hibernate-off | not searched | Need real hardware first. |
+
+Nothing was marked `verified`. The three tweaks that are fully documented and passed in the Sandbox (dark-mode, disable-activity-history, telemetry-minimum) are the candidates, with the caveats above. What was observed in the Sandbox is the registry state, not the visible effect.

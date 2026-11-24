@@ -17,7 +17,7 @@ Legend: Risk L/M/H. Restart: none, explorer (restart Explorer), signout, reboot.
 | taskbar-left (W11) | Align taskbar left | HKCU `...\Explorer\Advanced` `TaskbarAl` = 0 | L | explorer | off (taste) |
 | dark-mode | Dark theme | HKCU `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize` `AppsUseLightTheme` = 0 and `SystemUsesLightTheme` = 0 | L | none | off (taste) |
 | this-pc-launch | Explorer opens to This PC | HKCU `...\Explorer\Advanced` `LaunchTo` = 1 | L | explorer | on |
-| disable-search-web | No web results in Start search | HKCU `Software\Policies\Microsoft\Windows\Explorer` `DisableSearchBoxSuggestions` = 1 | L | explorer | on |
+| disable-search-web | No recent searches in File Explorer search (was "No web results in Start search"; Microsoft documents the policy for File Explorer only) | HKCU `Software\Policies\Microsoft\Windows\Explorer` `DisableSearchBoxSuggestions` = 1 | L | explorer | on |
 
 ## Privacy
 | id | What | Action | Risk | Restart | Default |
@@ -33,7 +33,7 @@ Legend: Risk L/M/H. Restart: none, explorer (restart Explorer), signout, reboot.
 |---|---|---|---|---|---|
 | disable-game-dvr | Turn off Game DVR background capture | HKCU `System\GameConfigStore` `GameDVR_Enabled` = 0; HKCU `Software\Microsoft\Windows\CurrentVersion\GameDVR` `AppCaptureEnabled` = 0 | L | none | on |
 | startup-delay | Remove the startup app delay | HKCU `Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize` `StartupDelayInMSec` = 0 (create key) | L | signout | on |
-| delivery-optimization-off | Don't upload updates to other PCs | HKLM `SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config` `DODownloadMode` = 0 (HTTP only) | L | none | on |
+| delivery-optimization-off | Don't upload updates to other PCs | HKLM `SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization` `DODownloadMode` = 0 (HTTP only). Path corrected 2026-11-24 from `...\CurrentVersion\DeliveryOptimization\Config` to the documented policy location. | L | none | on |
 | visual-effects-balanced | Fewer animations (optional) | HKCU `Control Panel\Desktop\WindowMetrics` `MinAnimate` = "0" and related; verify exactly which values the UI toggle writes before shipping | M | signout | off |
 
 ## Power
