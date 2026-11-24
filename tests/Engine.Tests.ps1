@@ -107,6 +107,17 @@ Describe 'Plan resolution' {
         ($plan | Where-Object Kind -eq 'app').Id | Should -Be @('rt')
     }
 
+    It '-Exact plans only what was asked for, ignoring the preset' {
+        $plan = Resolve-TabulaPlan -Config $script:cfg -Profile (New-TestProfile) -Exact -Tweaks @('off') -Apps @('other')
+        @($plan | ForEach-Object { '{0}:{1}' -f $_.Kind, $_.Id }) | Should -Be @('tweak:off', 'app:other')
+    }
+
+    It '-Exact still pulls in required apps and holds an unverified tweak' {
+        $plan = Resolve-TabulaPlan -Config $script:cfg -Profile (New-TestProfile) -Exact -Tweaks @('unverified') -Apps @('app')
+        @($plan | ForEach-Object { '{0}:{1}' -f $_.Kind, $_.Id }) | Should -Be @('tweak:unverified', 'app:rt', 'app:app')
+        ($plan | Where-Object Id -eq 'unverified').Hold | Should -Match 'unverified'
+    }
+
     It 'holds high-risk tweaks under -Yes unless -IncludeHighRisk' {
         $held = Resolve-TabulaPlan -Config $script:cfg -Profile (New-TestProfile) -Scope Tweaks -Preset Minimal -Yes
         ($held | Where-Object Id -eq 'risky').Hold | Should -Match 'IncludeHighRisk'
@@ -270,6 +281,48 @@ Describe 'Plan runner, dry run and CLI' {
         $res = Invoke-TabulaPlan -Plan $plan -Profile $script:profile1 -NoRestorePoint
         ($res | ForEach-Object Status) | Should -Be @('applied', 'cancelled')
         (Get-TabulaSummary -Results $res).ExitCode | Should -Be 3
+    }
+
+    It 'reports start and done for every item, in order, with the result on done' {
+        $script:events = New-Object System.Collections.Generic.List[string]
+        $cb = { param($e) $script:events.Add(('{0}:{1}:{2}' -f $e.Phase, $e.Index, $e.Id)) }
+        $plan = Resolve-TabulaPlan -Config $script:cfg -Profile $script:profile1
+        [void](Invoke-TabulaPlan -Plan $plan -Profile $script:profile1 -NoRestorePoint -OnProgress $cb)
+        @($script:events) | Should -Be @('start:1:ext', 'done:1:ext', 'start:2:exp', 'done:2:exp', 'start:3:a1', 'done:3:a1')
+    }
+
+    It 'a throwing progress callback does not stop the run' {
+        $plan = Resolve-TabulaPlan -Config $script:cfg -Profile $script:profile1 -Scope Tweaks
+        $res = Invoke-TabulaPlan -Plan $plan -Profile $script:profile1 -NoRestorePoint -OnProgress { throw 'boom' }
+        ($res | ForEach-Object Status) | Should -Be @('applied', 'skipped')
+        Get-TestRegValue 'Cli' 'HideFileExt' | Should -Be 0
+    }
+
+    It 'stops between items when the caller flips -Control (the window Cancel button)' {
+        $ctl = [hashtable]::Synchronized(@{ Cancel = $false })
+        $cb = { param($e) if ($e.Phase -eq 'done' -and $e.Index -eq 1) { $ctl['Cancel'] = $true } }
+        $plan = Resolve-TabulaPlan -Config $script:cfg -Profile $script:profile1
+        $res = Invoke-TabulaPlan -Plan $plan -Profile $script:profile1 -NoRestorePoint -Control $ctl -OnProgress $cb
+        ($res | ForEach-Object Status) | Should -Be @('applied', 'cancelled', 'cancelled')
+        Get-TestRegValue 'Cli' 'HideFileExt' | Should -Be 0
+        (Get-TabulaSummary -Results $res).ExitCode | Should -Be 3
+    }
+
+    It 'a cancelled undo leaves the run revertible and resumable' {
+        $t2 = New-TestTweak 'two' @((New-TestRegAction 'Cli' 'Two' 1))
+        $cfg2 = @{ tweaks = @($script:tw, $t2); apps = @(); presets = $script:cfg.presets }
+        $plan = Resolve-TabulaPlan -Config $cfg2 -Profile $script:profile1
+        [void](Invoke-TabulaPlan -Plan $plan -Profile $script:profile1 -NoRestorePoint)
+        $ctl = [hashtable]::Synchronized(@{ Cancel = $false })
+        $cb = { param($e) if ($e.Phase -eq 'done' -and $e.Index -eq 1) { $ctl['Cancel'] = $true } }
+        $res = Invoke-TabulaUndo -Tweaks $cfg2.tweaks -Control $ctl -OnProgress $cb
+        ($res | ForEach-Object Status) | Should -Be @('reverted', 'cancelled')   # newest change first
+        Get-TestRegValue 'Cli' 'Two' | Should -Be '<<absent>>'
+        Get-TestRegValue 'Cli' 'HideFileExt' | Should -Be 0
+        (Get-TabulaState)['runs'][0]['status'] | Should -Not -Be 'reverted'
+        $again = Invoke-TabulaUndo -Tweaks $cfg2.tweaks
+        ($again | ForEach-Object Status) | Should -Be @('reverted')
+        (Get-TabulaState)['runs'][0]['status'] | Should -Be 'reverted'
     }
 
     It 'summarises restart needs' {

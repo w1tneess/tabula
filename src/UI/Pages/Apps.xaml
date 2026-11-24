@@ -54,7 +54,7 @@
   </ScrollViewer>
 
   <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,14,0,0">
-    <Button x:Name="BtnInstall" Style="{DynamicResource PrimaryButton}" Content="Install selected" IsEnabled="False" ToolTip="Installing from the window arrives in M4." AutomationProperties.Name="Install selected"/>
+    <Button x:Name="BtnInstall" Style="{DynamicResource PrimaryButton}" Content="Install selected" IsEnabled="False" AutomationProperties.Name="Install selected"/>
     <Button x:Name="BtnPreset" Style="{DynamicResource SecondaryButton}" Content="Select preset" Margin="10,0,0,0" ToolTip="Tick the apps the chosen preset installs." AutomationProperties.Name="Select preset"/>
     <Button x:Name="BtnExport" Style="{DynamicResource SecondaryButton}" Content="Export installed apps" Margin="10,0,0,0" ToolTip="Writes the apps installed on this PC to a file in the same format as the app list." AutomationProperties.Name="Export installed apps"/>
     <Button x:Name="BtnRefresh" Style="{DynamicResource GhostButton}" Content="Refresh" Margin="10,0,0,0" ToolTip="Check what is installed again." AutomationProperties.Name="Refresh installed state"/>

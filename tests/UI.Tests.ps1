@@ -102,3 +102,98 @@ Describe 'Opening the window from the shipped script' {
         $out | Should -Not -Match 'Exception'
     }
 }
+
+Describe 'Driving the engine from the window (real buttons, fixture config, scratch registry key, stubbed winget)' {
+    BeforeAll {
+        $run = {
+            param($mode)
+            $out = & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $script:root 'tests\UiRunHarness.ps1') -Mode $mode 2>&1 | Out-String
+            $out.Trim() | ConvertFrom-Json
+        }
+        $script:flow = & $run 'Flow'
+        $script:nonAdmin = & $run 'NotAdmin'
+    }
+
+    It 'finishes every step without a timeout or a handler error' {
+        @($script:flow.errors) | Should -BeNullOrEmpty
+        @($script:nonAdmin.errors) | Should -BeNullOrEmpty
+        $script:flow.logFileText | Should -Not -Match 'handler failed'
+        $script:flow.logFileText | Should -Not -Match '\[ERROR\]'
+    }
+
+    It 'gates the buttons: no admin, nothing ticked, no run to undo' {
+        $b = $script:flow.steps.initial.buttons
+        $b.BtnApply.enabled | Should -BeFalse
+        $b.BtnStageApply.enabled | Should -BeFalse
+        $b.BtnUndoLast.tip | Should -Be 'No run to undo.'
+        $n = $script:nonAdmin.steps.initial.buttons
+        $n.BtnInstall.tip | Should -Be 'Needs an elevated PowerShell.'
+        $n.BtnUndoLast.tip | Should -Be 'Needs an elevated PowerShell.'
+        $script:nonAdmin.steps.plan.buttons.BtnApply.enabled | Should -BeFalse
+        $script:nonAdmin.steps.plan.buttons.BtnDry.enabled | Should -BeTrue
+    }
+
+    It 'dry run from the window shows every item and changes nothing, with or without admin' {
+        foreach ($d in $script:flow.steps.dry, $script:nonAdmin.steps.dry) {
+            @($d.rows) | Should -Be @('tweak:t-one=Would apply', 'tweak:t-two=Would apply', 'app:fx-a=Would apply', 'app:fx-b=Would apply')
+            $d.summary | Should -Be '4 changes ready. Nothing applied.'
+            $d.reg.One | Should -Be '<<absent>>'
+            $d.stateExists | Should -BeFalse
+        }
+    }
+
+    It 'applies the plan with live status and log lines, and cancel stops after the running item' {
+        $a = $script:flow.steps.apply
+        $script:flow.steps.cancelWhileRunning | Should -BeTrue
+        @($a.rows) | Should -Be @('tweak:t-one=Applied', 'tweak:t-two=Applied', 'app:fx-a=Applied', 'app:fx-b=Not run')
+        $a.title | Should -Be 'Cancelled'
+        $a.summary | Should -Match '1 not run \(cancelled\)'
+        $a.reg.One | Should -Be '1'
+        $a.log | Should -Match 'tweak:t-one applied'      # streamed from the job to the log panel
+        $script:flow.logFileText | Should -Match 'tweak:t-one applied'   # and written to the log file by the UI thread
+        $a.undoVisible | Should -BeTrue
+        $script:flow.steps.applyButtons.BtnUndoLast.enabled | Should -BeTrue
+    }
+
+    It 'undoes the run newest change first, says apps stay, and then has nothing left to undo' {
+        $u = $script:flow.steps.undo
+        @($u.rows) | Should -Be @('tweak:t-two=Reverted', 'tweak:t-one=Reverted')
+        $u.summary | Should -Match 'Undo complete.*Installed apps stay installed'
+        $u.reg.One | Should -Be '<<absent>>'
+        $u.reg.Two | Should -Be '<<absent>>'
+        $script:flow.steps.undoAfter.BtnUndoLast.enabled | Should -BeFalse
+    }
+
+    It 'stages a tweak and applies it; unverified tweaks cannot be staged; an applied tweak cannot be switched off' {
+        $script:flow.steps.stagedBefore.exp | Should -BeFalse
+        $script:flow.steps.stagedBefore.one | Should -BeTrue
+        $script:flow.steps.stagedBar.visible | Should -BeTrue
+        $script:flow.steps.stagedBar.button.BtnStageApply.enabled | Should -BeTrue
+        @($script:flow.steps.stage.rows) | Should -Be @('tweak:t-one=Applied')
+        $script:flow.steps.stage.reg.Exp | Should -Be '<<absent>>'
+        $after = $script:flow.steps.stageAfter
+        $after.baseline | Should -BeTrue
+        $after.enabled | Should -BeFalse
+        $after.reason | Should -Match '^On\.'
+    }
+
+    It 'installs only the ticked apps' {
+        @($script:flow.steps.install.rows) | Should -Be @('app:fx-a=Applied')
+    }
+
+    It 'waits for the running item when the window is closed during a real run, then closes' {
+        $script:flow.steps.visibleAfterClose | Should -BeTrue   # Close() was refused while an app was installing
+        $script:flow.closedByRun | Should -BeTrue
+        @($script:flow.steps.closeRun.rows) | Should -Be @('tweak:t-one=Skipped', 'tweak:t-two=Applied', 'app:fx-a=Applied', 'app:fx-b=Not run')
+    }
+}
+
+Describe 'Run view styling' {
+    It 'uses themed templates for every control in the run view' {
+        # The NotAdmin run is the short one: it shows the Run view after a dry run, which is all this needs.
+        $out = & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $script:root 'tests\UiRunHarness.ps1') -Mode NotAdmin 2>&1 | Out-String
+        $scan = ($out.Trim() | ConvertFrom-Json).steps.runViewScan
+        $scan.checked | Should -BeGreaterThan 3
+        @($scan.defaultLooking) -join ', ' | Should -BeNullOrEmpty
+    }
+}

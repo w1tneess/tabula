@@ -57,7 +57,7 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <TextBlock x:Name="StageText" VerticalAlignment="Center"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal">
-        <Button x:Name="BtnStageApply" Style="{DynamicResource PrimaryButton}" Content="Apply changes" IsEnabled="False" ToolTip="Applying from the window arrives in M4." AutomationProperties.Name="Apply staged changes"/>
+        <Button x:Name="BtnStageApply" Style="{DynamicResource PrimaryButton}" Content="Apply changes" IsEnabled="False" AutomationProperties.Name="Apply staged changes"/>
         <Button x:Name="BtnStageDiscard" Style="{DynamicResource GhostButton}" Content="Discard" Margin="8,0,0,0" AutomationProperties.Name="Discard staged changes"/>
       </StackPanel>
     </Grid>

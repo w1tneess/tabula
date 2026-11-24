@@ -21,6 +21,31 @@
         </Grid>
       </Border>
     </DataTemplate>
+    <DataTemplate x:Key="RunRow">
+      <Border Style="{DynamicResource RowCard}">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0" Margin="0,0,12,0">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Reason}" Style="{DynamicResource Caption}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Reason}"/>
+          </StackPanel>
+          <Border Grid.Column="1" Style="{DynamicResource Pill}" MinWidth="96" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="ok"><Setter Property="Foreground" Value="{DynamicResource OkBrush}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="warn"><Setter Property="Foreground" Value="{DynamicResource WarnBrush}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="err"><Setter Property="Foreground" Value="{DynamicResource ErrBrush}"/></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Border>
+        </Grid>
+      </Border>
+    </DataTemplate>
   </Grid.Resources>
 
   <!-- Home -->
@@ -62,9 +87,28 @@
       <ItemsControl x:Name="PlanList" ItemTemplate="{StaticResource PlanRow}" Focusable="False" Margin="0,0,10,0"/>
     </ScrollViewer>
     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
-      <Button x:Name="BtnApply" Style="{DynamicResource PrimaryButton}" Content="Apply plan" IsEnabled="False" ToolTip="Applying from the window arrives in M4." AutomationProperties.Name="Apply plan"/>
-      <Button x:Name="BtnDry" Style="{DynamicResource SecondaryButton}" Content="Dry run" Margin="10,0,0,0" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="Dry run"/>
-      <Button x:Name="BtnCancelPlan" Style="{DynamicResource GhostButton}" Content="Cancel" Margin="10,0,0,0" AutomationProperties.Name="Cancel"/>
+      <Button x:Name="BtnApply" Style="{DynamicResource PrimaryButton}" Content="Apply plan" IsEnabled="False" AutomationProperties.Name="Apply plan"/>
+      <Button x:Name="BtnDry" Style="{DynamicResource SecondaryButton}" Content="Dry run" Margin="10,0,0,0" IsEnabled="False" ToolTip="Shows what would change. Nothing is applied." AutomationProperties.Name="Dry run"/>
+      <Button x:Name="BtnCancelPlan" Style="{DynamicResource GhostButton}" Content="Back" Margin="10,0,0,0" AutomationProperties.Name="Back to start"/>
+    </StackPanel>
+  </Grid>
+
+  <!-- Run -->
+  <Grid x:Name="RunView" Visibility="Collapsed">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Margin="0,0,0,16">
+      <TextBlock x:Name="RunTitle" Text="Working" Style="{DynamicResource Title}"/>
+      <TextBlock x:Name="RunSummary" Style="{DynamicResource Dim}" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+      <ItemsControl x:Name="RunList" ItemTemplate="{StaticResource RunRow}" Focusable="False" Margin="0,0,10,0"/>
+    </ScrollViewer>
+    <TextBox Grid.Row="2" x:Name="RunLog" IsReadOnly="True" Height="96" Margin="0,12,10,0" FontFamily="{DynamicResource MonoFont}" FontSize="11" TextWrapping="NoWrap"
+             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Run log"/>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
+      <Button x:Name="BtnRunCancel" Style="{DynamicResource SecondaryButton}" Content="Cancel run" ToolTip="Stops after the current item. An app that is installing is left to finish." AutomationProperties.Name="Cancel run"/>
+      <Button x:Name="BtnRunBack" Style="{DynamicResource PrimaryButton}" Content="Back" Visibility="Collapsed" AutomationProperties.Name="Back to start"/>
+      <Button x:Name="BtnRunUndo" Style="{DynamicResource SecondaryButton}" Content="Undo this run" Margin="10,0,0,0" Visibility="Collapsed" ToolTip="Reverts the tweaks from this run. Installed apps stay." AutomationProperties.Name="Undo this run"/>
     </StackPanel>
   </Grid>
 </Grid>

@@ -37,8 +37,9 @@ function Resolve-TabulaPlan {
         [Parameter(Mandatory)]$Config, [Parameter(Mandatory)]$Profile,
         [string]$Preset = 'Standard',
         [ValidateSet('Both', 'Tweaks', 'Apps')][string]$Scope = 'Both',
-        [string[]]$Apps = @(), [string[]]$Skip = @(),
-        [switch]$IncludeHighRisk, [switch]$Yes
+        [string[]]$Apps = @(), [string[]]$Skip = @(), [string[]]$Tweaks = @(),
+        [switch]$IncludeHighRisk, [switch]$Yes,
+        [switch]$Exact   # use only -Tweaks and -Apps, not the preset's lists (the window plans from ticked rows)
     )
     $p = @($Config['presets'] | Where-Object { $_['id'] -eq $Preset }) | Select-Object -First 1
     if (-not $p) { throw "Unknown preset '$Preset'" }
@@ -65,6 +66,8 @@ function Resolve-TabulaPlan {
             foreach ($i in @($o['excludeApps'] | Where-Object { $null -ne $_ })) { [void]$appIds.Remove([string]$i) }
         }
     }
+    if ($Exact) { $tweakIds.Clear(); $appIds.Clear() }
+    foreach ($i in $Tweaks) { if (-not $tweakIds.Contains($i)) { $tweakIds.Add($i) } }
     foreach ($i in $Apps) { if (-not $appIds.Contains($i)) { $appIds.Add($i) } }
     foreach ($i in $Skip) { [void]$appIds.Remove($i) }
 
@@ -114,19 +117,40 @@ function Confirm-TabulaPlan {
     $answer -match '^(y|yes)$'
 }
 
+function Send-TabulaProgress {
+    # Progress is a courtesy to the window. A callback that throws must never stop a run that is changing the system.
+    [CmdletBinding()]
+    param($Callback, [Parameter(Mandatory)][hashtable]$Event)
+    if (-not $Callback) { return }
+    try { & $Callback $Event }
+    catch { Write-TabulaLog ('progress callback failed: ' + $_.Exception.Message) -Level WARN }
+}
+
+function Test-TabulaCancelled {
+    # $Control is a hashtable the caller flips from another thread (the window's Cancel button).
+    [CmdletBinding()]
+    param($Control)
+    [bool]($script:TabulaCancel -or ($Control -and $Control['Cancel']))
+}
+
 function Invoke-TabulaPlan {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Plan, [Parameter(Mandatory)]$Profile, [switch]$DryRun, [switch]$NoRestorePoint, [switch]$Yes)
+    param(
+        [Parameter(Mandatory)]$Plan, [Parameter(Mandatory)]$Profile, [switch]$DryRun, [switch]$NoRestorePoint, [switch]$Yes,
+        [scriptblock]$OnProgress, $Control
+    )
     $script:TabulaCancel = $false
     $results = New-Object System.Collections.Generic.List[object]
     $runnable = @($Plan | Where-Object { -not $_.Hold })
     $state = $null; $run = $null
+    $total = @($Plan).Count; $index = 0
 
     if (-not $DryRun -and $runnable.Count -gt 0) {
         $state = Get-TabulaState
         $run = New-TabulaRun -State $state -Profile $Profile
         if ($NoRestorePoint) { Write-TabulaLog 'restore point skipped by request (-NoRestorePoint)' -Level WARN }
         else {
+            Send-TabulaProgress $OnProgress @{ Phase = 'prepare'; Text = 'Creating a restore point.' }
             $rp = New-TabulaRestorePoint -RunId $run['runId'] -AllowEnable:$Yes
             $run['restorePoint'] = $rp
             Save-TabulaState $state
@@ -137,9 +161,14 @@ function Invoke-TabulaPlan {
 
     $wingetReady = $null
     foreach ($item in $Plan) {
-        if ($script:TabulaCancel) {
-            $results.Add((New-TabulaResult -Kind $item.Kind -Id $item.Id -Name $item.Name -Status cancelled -Reason 'run cancelled')); continue
+        $index++
+        if (Test-TabulaCancelled $Control) {
+            $r = New-TabulaResult -Kind $item.Kind -Id $item.Id -Name $item.Name -Status cancelled -Reason 'run cancelled'
+            $results.Add($r)
+            Send-TabulaProgress $OnProgress @{ Phase = 'done'; Index = $index; Total = $total; Kind = $item.Kind; Id = $item.Id; Result = $r }
+            continue
         }
+        Send-TabulaProgress $OnProgress @{ Phase = 'start'; Index = $index; Total = $total; Kind = $item.Kind; Id = $item.Id; Name = $item.Name }
         if ($item.Hold) {
             $r = New-TabulaResult -Kind $item.Kind -Id $item.Id -Name $item.Name -Status skipped -Reason $item.Hold
         }
@@ -161,6 +190,7 @@ function Invoke-TabulaPlan {
             Write-TabulaLog ('{0}:{1} {2}{3}' -f $r.Kind, $r.Id, $r.Status, $(if ($r.Reason) { " ($($r.Reason))" } else { '' }))
         }
         $results.Add($r)
+        Send-TabulaProgress $OnProgress @{ Phase = 'done'; Index = $index; Total = $total; Kind = $item.Kind; Id = $item.Id; Result = $r }
     }
     if ($run) { Complete-TabulaRun -State $state -Run $run }
     , $results.ToArray()
@@ -168,7 +198,8 @@ function Invoke-TabulaPlan {
 
 function Invoke-TabulaUndo {
     [CmdletBinding()]
-    param([switch]$DryRun, $Tweaks = @())
+    param([switch]$DryRun, $Tweaks = @(), [scriptblock]$OnProgress, $Control)
+    $script:TabulaCancel = $false
     $state = Get-TabulaState
     $run = Get-TabulaRevertibleRun -State $state
     if (-not $run) { return , @() }
@@ -178,13 +209,26 @@ function Invoke-TabulaUndo {
 
     $results = New-Object System.Collections.Generic.List[object]
     $changes = @($run['changes'])
+    $todo = @($changes | Where-Object { $_['status'] -in 'applied', 'pending' })   # skipped and failed changes are not touched
+    $index = 0
     for ($i = $changes.Count - 1; $i -ge 0; $i--) {
         $c = $changes[$i]
-        if ($c['status'] -notin 'applied', 'pending') { continue }   # skipped and failed changes are not touched
-        $name = if ($names.ContainsKey([string]$c['tweakId'])) { $names[[string]$c['tweakId']] } else { '' }
-        $results.Add((Invoke-TabulaTweakUndo -Change $c -State $state -DryRun:$DryRun -Name $name))
+        if ($c['status'] -notin 'applied', 'pending') { continue }
+        $index++
+        $id = [string]$c['tweakId']
+        $name = if ($names.ContainsKey($id)) { $names[$id] } else { '' }
+        # Cancelling an undo leaves the rest applied and the run revertible, so it can be resumed.
+        if (Test-TabulaCancelled $Control) {
+            $r = New-TabulaResult -Kind tweak -Id $id -Name $name -Status cancelled -Reason 'undo cancelled'
+        }
+        else {
+            Send-TabulaProgress $OnProgress @{ Phase = 'start'; Index = $index; Total = $todo.Count; Kind = 'tweak'; Id = $id; Name = $name }
+            $r = Invoke-TabulaTweakUndo -Change $c -State $state -DryRun:$DryRun -Name $name
+        }
+        $results.Add($r)
+        Send-TabulaProgress $OnProgress @{ Phase = 'done'; Index = $index; Total = $todo.Count; Kind = 'tweak'; Id = $id; Result = $r }
     }
-    if (-not $DryRun -and @($results | Where-Object { $_.Status -eq 'failed' }).Count -eq 0) {
+    if (-not $DryRun -and @($results | Where-Object { $_.Status -in 'failed', 'cancelled' }).Count -eq 0) {
         $run['status'] = 'reverted'
         Save-TabulaState $state
     }

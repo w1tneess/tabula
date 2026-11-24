@@ -5,6 +5,7 @@ $script:TabulaLog = @{
     Lines = (New-Object System.Collections.Generic.List[string])
     Debug = $false
     Quiet = $false
+    Queue = $null   # set in a window job: lines go to the UI thread, which is the only writer of the log file
 }
 
 function Get-TabulaTimestamp {
@@ -48,6 +49,10 @@ function Write-TabulaLog {
     $line = '{0} [{1}] {2}' -f (Get-TabulaTimestamp), $Level, $Message
     $script:TabulaLog.Lines.Add($line)
 
+    if ($script:TabulaLog.ContainsKey('Queue') -and $script:TabulaLog.Queue) {
+        $script:TabulaLog.Queue.Enqueue(@{ TabulaLogLine = $line })
+        return
+    }
     if ($script:TabulaLog.Path) {
         try { [IO.File]::AppendAllText($script:TabulaLog.Path, $line + "`r`n") }
         catch { $script:TabulaLog.Path = $null }   # a broken log path must not stop the run; stop retrying
@@ -55,6 +60,17 @@ function Write-TabulaLog {
     if (-not $script:TabulaLog.Quiet) {
         $color = switch ($Level) { 'WARN' { 'Yellow' } 'ERROR' { 'Red' } 'DEBUG' { 'DarkGray' } default { 'Gray' } }
         Write-Host $line -ForegroundColor $color
+    }
+}
+
+function Add-TabulaLogLine {
+    # A line that a job already formatted. Called on the UI thread so the file has one writer.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Line)
+    $script:TabulaLog.Lines.Add($Line)
+    if ($script:TabulaLog.Path) {
+        try { [IO.File]::AppendAllText($script:TabulaLog.Path, $Line + "`r`n") }
+        catch { $script:TabulaLog.Path = $null }
     }
 }
 
