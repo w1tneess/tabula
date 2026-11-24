@@ -182,7 +182,7 @@ function Invoke-TabulaPlan {
         else {
             if (-not $DryRun -and $null -eq $wingetReady) { $wingetReady = Assert-TabulaWinget }
             if (-not $DryRun -and -not $wingetReady) {
-                $r = New-TabulaResult -Kind app -Id $item.Id -Name $item.Name -Status failed -Reason 'winget is not available'
+                $r = New-TabulaResult -Kind app -Id $item.Id -Name $item.Name -Status failed -Reason 'winget is not available. Install App Installer from the Microsoft Store, then run again.'
             }
             else { $r = Install-TabulaApp -App $item.Item -DryRun:$DryRun }
         }

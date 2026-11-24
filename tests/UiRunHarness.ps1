@@ -1,7 +1,7 @@
 # Run in its own STA process by UI.Tests.ps1. Opens the real window off-screen, clicks the real buttons and prints one JSON line.
 # Everything the engine changes lives under HKCU:\Software\TabulaTest. winget, the restore point and the elevation flag are
 # stubbed here (functions defined before the window opens are copied into its job runspaces), so nothing real is installed.
-param([ValidateSet('Flow', 'NotAdmin', 'Real')][string]$Mode = 'Flow', [ValidateSet('Dark', 'Light')][string]$Theme = 'Dark', [string]$ShotDir)
+param([ValidateSet('Flow', 'NotAdmin', 'Real', 'NoWinget', 'Unsupported')][string]$Mode = 'Flow', [ValidateSet('Dark', 'Light')][string]$Theme = 'Dark', [string]$ShotDir)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 . "$PSScriptRoot\TestHelper.ps1"
@@ -30,9 +30,10 @@ $app = '{{ "id": "{0}", "name": "{1}", "category": "Utilities", "description": "
 
 # ---- stubs (copied into the job runspaces by name) ----
 $origProfile = (Get-Command Get-TabulaProfile).ScriptBlock.ToString()
-$admin = if ($Mode -eq 'Flow') { '$true' } else { '$false' }
+$admin = if ($Mode -in 'Flow', 'NoWinget') { '$true' } else { '$false' }
+$supported = if ($Mode -eq 'Unsupported') { '$false' } else { '$true' }
 if ($Mode -ne 'Real') {
-Set-Item -Path Function:\Get-TabulaProfile -Value ([scriptblock]::Create("`$p = & { $origProfile }`n`$p.IsAdmin = $admin`n`$p"))
+Set-Item -Path Function:\Get-TabulaProfile -Value ([scriptblock]::Create("`$p = & { $origProfile }`n`$p.IsAdmin = $admin`n`$p.Supported = $supported`n`$p.SupportReason = 'Windows Server is not supported.'`n`$p"))
 function Get-TabulaWingetPath { 'winget.exe' }
 function Assert-TabulaWinget { $true }
 function Test-TabulaAppInstalled { param($WingetId) $false }
@@ -44,6 +45,10 @@ function Install-TabulaApp {
     Start-Sleep -Milliseconds 800
     Write-TabulaLog "app:$id installed (stub)"
     New-TabulaResult -Kind app -Id $id -Name $name -Status applied
+}
+if ($Mode -eq 'NoWinget') {
+function Get-TabulaWingetPath { $null }
+function Assert-TabulaWinget { $false }
 }
 }   # Mode Real keeps the real profile, winget and catalog: dry run only, read-only checks
 
@@ -82,6 +87,42 @@ function Save-Shot([string]$Name) {
     $fs = [IO.File]::Create((Join-Path $ShotDir ('{0}-{1}.png' -f $Name, $Theme.ToLower())))
     try { $enc.Save($fs) } finally { $fs.Close() }
 }
+function Get-TabOrder {
+    # Logical focus works without the off-screen window being active. Walks Tab until it wraps.
+    $w = $script:TabulaUi.Window
+    $req = New-Object Windows.Input.TraversalRequest([Windows.Input.FocusNavigationDirection]::First)
+    $names = New-Object System.Collections.Generic.List[string]; $unnamed = 0; $seen = New-Object System.Collections.Generic.HashSet[object]
+    [void]$w.MoveFocus($req)
+    $req = New-Object Windows.Input.TraversalRequest([Windows.Input.FocusNavigationDirection]::Next)
+    for ($i = 0; $i -lt 150; $i++) {
+        $f = $w.Dispatcher.Invoke([Func[object]] { [Windows.Input.Keyboard]::FocusedElement })
+        if ($null -eq $f) { $f = [Windows.Input.FocusManager]::GetFocusedElement($w) }
+        if ($null -eq $f -or -not $seen.Add($f)) { break }
+        $n = [Windows.Automation.AutomationProperties]::GetName($f)
+        if (-not $n -and $f -is [Windows.Controls.ContentControl]) { $n = [string]$f.Content }
+        if (-not $n -and $f -is [Windows.Controls.TextBox]) { $n = [string]$f.Text }
+        if (-not $n) { $unnamed++; $n = '<' + $f.GetType().Name + '>' }
+        $names.Add($n)
+        if (-not $f.MoveFocus($req)) { break }
+    }
+    [ordered]@{ names = $names.ToArray(); unnamed = $unnamed }
+}
+function Get-Overflow {
+    # Visible elements that stick out past the right edge of the window content. Vertical overflow is scrolled, not clipped.
+    $u = $script:TabulaUi; $root = $u.PageHost; $limit = $u.Window.Content.ActualWidth
+    $bad = @()
+    $q = New-Object System.Collections.Queue; $q.Enqueue($root)
+    while ($q.Count -gt 0) {
+        $e = $q.Dequeue()
+        if ($e -is [Windows.UIElement] -and -not $e.IsVisible) { continue }
+        if ($e -is [Windows.FrameworkElement] -and $e -isnot [Windows.Controls.ScrollViewer] -and $e.ActualWidth -gt 0 -and $e.ActualHeight -gt 0 -and $e -is [Windows.Controls.Control]) {
+            $r = $e.TransformToAncestor($u.Window.Content).TransformBounds((New-Object Windows.Rect 0, 0, $e.ActualWidth, $e.ActualHeight))
+            if ($r.Right -gt $limit + 1) { $bad += ('{0} right={1:N0}>{2:N0}' -f $e.GetType().Name, $r.Right, $limit) }
+        }
+        if ($e -is [Windows.Media.Visual]) { for ($i = 0; $i -lt [Windows.Media.VisualTreeHelper]::GetChildrenCount($e); $i++) { $q.Enqueue([Windows.Media.VisualTreeHelper]::GetChild($e, $i)) } }
+    }
+    $bad
+}
 $finished = { $u = $script:TabulaUi; (-not $u.Running) -and ($u.BtnRunBack.Visibility -eq 'Visible') -and [bool]$u.RunSummary.Text }
 $idle = { $u = $script:TabulaUi; (-not $u.Running) -and (-not $u.CheckJob) -and (-not $u.DetectJob) -and (-not $u.PendingRun) }
 
@@ -90,8 +131,9 @@ function Add-Step([string]$Name, [scriptblock]$Do, [scriptblock]$Until = { $true
 
 Add-Step 'ready' { } { $u = $script:TabulaUi; [bool]$u.Profile -and (& $idle) }
 Add-Step 'initial' {
-    $script:result.steps.initial = [ordered]@{ buttons = (Get-ButtonState 'BtnApply', 'BtnDry', 'BtnInstall', 'BtnStageApply', 'BtnUndoLast'); admin = [bool]$script:TabulaUi.Profile.IsAdmin }
+    $script:result.steps.initial = [ordered]@{ buttons = (Get-ButtonState 'BtnApply', 'BtnDry', 'BtnInstall', 'BtnStageApply', 'BtnUndoLast'); admin = [bool]$script:TabulaUi.Profile.IsAdmin; dpi = (Set-TabulaDpiAwareness) }
 }
+if ($Mode -ne 'Unsupported') {
 Add-Step 'plan' { Click 'BtnSetup' } { $script:TabulaUi.PlanView.Visibility -eq 'Visible' }
 Add-Step 'plan-snap' {
     $u = $script:TabulaUi
@@ -114,6 +156,7 @@ Add-Step 'dry-snap' {
         if ($e -is [Windows.Media.Visual]) { for ($i = 0; $i -lt [Windows.Media.VisualTreeHelper]::GetChildrenCount($e); $i++) { $q.Enqueue([Windows.Media.VisualTreeHelper]::GetChild($e, $i)) } }
     }
     $script:result.steps.runViewScan = [ordered]@{ checked = $seen; defaultLooking = $bad }
+}
 }
 
 if ($Mode -eq 'Flow') {
@@ -159,7 +202,41 @@ if ($Mode -eq 'Flow') {
         $script:result.closedByRun = $true
     } { $false }
 }
+elseif ($Mode -eq 'NoWinget') {
+    Add-Step 'rows' { $script:result.steps.appStatus = @($script:TabulaUi.AppRows | ForEach-Object { '{0}={1}' -f $_.Id, $_.Status }) }
+    Add-Step 'back-1' { Click 'BtnRunBack'; Click 'BtnSetup' } { $script:TabulaUi.PlanView.Visibility -eq 'Visible' }
+    Add-Step 'apply' { Click 'BtnApply' } $finished
+    Add-Step 'apply-snap' { $script:result.steps.apply = Get-RunSnapshot; Save-Shot 'Run-problems' }
+    Add-Step 'end' { $script:TabulaUi.Window.Close() }
+}
+elseif ($Mode -eq 'Unsupported') {
+    Add-Step 'snap' {
+        $u = $script:TabulaUi
+        $script:result.steps.unsupported = [ordered]@{ machine = $u.MachineLine.Text; status = $u.StatusText.Text; buttons = (Get-ButtonState 'BtnSetup', 'BtnReview'); banner = ($u.ElevBanner.Visibility -eq 'Visible') }
+        Save-Shot 'Unsupported'
+    }
+    Add-Step 'end' { $script:TabulaUi.Window.Close() }
+}
 else {
+    # Keyboard order and layout at the smallest allowed window, on every page and on the Plan and Run views.
+    Add-Step 'keys' {
+        $u = $script:TabulaUi
+        $o = [ordered]@{}
+        foreach ($p in 'Setup', 'Apps', 'Tweaks', 'Tools', 'About') { $u["Nav$p"].IsChecked = $true; $u.Window.UpdateLayout(); $o[$p] = Get-TabOrder }
+        $script:result.steps.tabOrder = $o
+    }
+    Add-Step 'small' {
+        $u = $script:TabulaUi
+        $u.Window.Width = $u.Window.MinWidth; $u.Window.Height = $u.Window.MinHeight; $u.Window.UpdateLayout()
+        $o = [ordered]@{}
+        foreach ($p in 'Setup', 'Apps', 'Tweaks', 'Tools', 'About') { $u["Nav$p"].IsChecked = $true; $u.Window.UpdateLayout(); $o[$p] = Get-Overflow; Save-Shot "Small-$p" }
+        $u.NavSetup.IsChecked = $true; $u.Window.UpdateLayout()
+        $o['Run'] = Get-Overflow; Save-Shot 'Small-Run'
+        Click 'BtnRunBack'; Click 'BtnSetup'; $u.Window.UpdateLayout()
+        $o['Plan'] = Get-Overflow; Save-Shot 'Small-Plan'
+        $script:result.steps.overflow = $o
+        $script:result.steps.minSize = "$($u.Window.MinWidth)x$($u.Window.MinHeight)"
+    }
     Add-Step 'end' { $script:TabulaUi.Window.Close() }
 }
 

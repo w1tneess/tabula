@@ -44,7 +44,7 @@
       <Expander x:Name="ExperimentalExpander" Header="EXPERIMENTAL (UNVERIFIED)" AutomationProperties.Name="Experimental tweaks">
         <StackPanel Margin="0,4,0,0">
           <Border Style="{DynamicResource Card}" Margin="0,0,0,10" BorderBrush="{DynamicResource WarnBrush}">
-            <TextBlock Style="{DynamicResource Dim}" Text="These tweaks were written from knowledge and have not been tested on Windows. They may do nothing, or something you did not expect. They are off by default and applying them from this window is not wired up yet."/>
+            <TextBlock Style="{DynamicResource Dim}" Text="These tweaks were written from knowledge and have not been tested on Windows. They may do nothing, or something you did not expect. They are off by default and every run holds them back."/>
           </Border>
           <StackPanel x:Name="ExperimentalGroups"/>
         </StackPanel>

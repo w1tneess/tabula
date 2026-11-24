@@ -197,3 +197,66 @@ Describe 'Run view styling' {
         @($scan.defaultLooking) -join ', ' | Should -BeNullOrEmpty
     }
 }
+
+Describe 'Copy rules (docs/04-ui-design-spec.md)' {
+    It 'has no exclamation marks, emojis, non-ASCII text or hype words in the window copy' {
+        $files = Get-ChildItem (Join-Path $script:root 'src\UI') -Include *.xaml, UI.ps1 -Recurse
+        $bad = foreach ($f in $files) {
+            $text = [IO.File]::ReadAllText($f.FullName)
+            if ($f.Extension -eq '.xaml') {
+                # Only attribute values and text nodes that are shown: Text, Content, Header, ToolTip, Name.
+                foreach ($m in [regex]::Matches($text, '(?:Text|Content|Header|ToolTip|AutomationProperties\.Name)="([^"{][^"]*)"')) {
+                    if ($m.Groups[1].Value -match '!|awesome|amazing|oops') { '{0}: {1}' -f $f.Name, $m.Groups[1].Value }
+                }
+            }
+            else {
+                foreach ($m in [regex]::Matches($text, "(?:Set-TabulaStatus|\.Text\s*=|Reason\s*=|\`$text\s*\+?=)\s*[\(]?'([^']*)'")) {
+                    if ($m.Groups[1].Value -match '!|awesome|amazing|oops') { '{0}: {1}' -f $f.Name, $m.Groups[1].Value }
+                }
+            }
+            if ($text -match '[^\x00-\x7F]') { '{0}: non-ASCII character' -f $f.Name }
+        }
+        @($bad) -join '; ' | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Keyboard, layout and error states (off-screen window)' {
+    BeforeAll {
+        $run = { param($mode) ((& powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $script:root 'tests\UiRunHarness.ps1') -Mode $mode 2>&1 | Out-String).Trim() | ConvertFrom-Json) }
+        $script:kb = & $run 'NotAdmin'
+        $script:nowinget = & $run 'NoWinget'
+        $script:unsup = & $run 'Unsupported'
+    }
+
+    It 'opens as a per-monitor DPI aware process so it is not bitmap-scaled' {
+        $script:kb.steps.initial.dpi | Should -Be 'per-monitor'
+    }
+
+    It 'every stop in the tab order has a name, and each page has at least one stop beyond the rail' {
+        @($script:kb.errors) | Should -BeNullOrEmpty
+        foreach ($p in $script:kb.steps.tabOrder.PSObject.Properties) {
+            $p.Value.unnamed | Should -Be 0 -Because $p.Name
+            @($p.Value.names).Count | Should -BeGreaterThan 5 -Because $p.Name
+            @($p.Value.names | Where-Object { $_ -like 'System.*' }) | Should -BeNullOrEmpty -Because $p.Name
+        }
+    }
+
+    It 'nothing sticks out of the window at the smallest allowed size, on any page or view' {
+        $script:kb.steps.minSize | Should -Be '860x560'
+        foreach ($p in $script:kb.steps.overflow.PSObject.Properties) { @($p.Value) -join ', ' | Should -BeNullOrEmpty -Because $p.Name }
+    }
+
+    It 'says why when winget is missing: status per app, a summary line, and a reason on each failed row' {
+        @($script:nowinget.errors) | Should -BeNullOrEmpty
+        @($script:nowinget.steps.appStatus) | Should -Be @('fx-a=No winget', 'fx-b=No winget')
+        $script:nowinget.steps.apply.title | Should -Be 'Finished with problems'
+        @($script:nowinget.steps.apply.rows) | Should -Be @('tweak:t-one=Applied', 'tweak:t-two=Applied', 'app:fx-a=Failed', 'app:fx-b=Failed')
+    }
+
+    It 'blocks setup with the reason on an unsupported machine' {
+        $u = $script:unsup.steps.unsupported
+        $u.machine | Should -Be 'Windows Server is not supported.'
+        $u.buttons.BtnSetup.enabled | Should -BeFalse
+        $u.buttons.BtnReview.enabled | Should -BeFalse
+    }
+}

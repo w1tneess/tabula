@@ -13,7 +13,7 @@
             <TextBlock Text="{Binding Description}" Style="{DynamicResource Caption}" TextTrimming="CharacterEllipsis"/>
           </StackPanel>
           <TextBlock Grid.Column="2" Text="{Binding Sub}" Style="{DynamicResource Caption}" VerticalAlignment="Center" Margin="0,0,12,0" MaxWidth="170" TextTrimming="CharacterEllipsis"/>
-          <Button Grid.Column="3" Style="{DynamicResource GhostButton}" Content="Site" Tag="{Binding Url}" Padding="10,4" FontSize="12" Margin="0,0,10,0" ToolTip="{Binding Url}" AutomationProperties.Name="Official site"/>
+          <Button Grid.Column="3" Style="{DynamicResource GhostButton}" Content="Site" Tag="{Binding Url}" Padding="10,4" FontSize="12" Margin="0,0,10,0" ToolTip="{Binding Url}" AutomationProperties.Name="{Binding Name, StringFormat='Official site of {0}'}"/>
           <Border Grid.Column="4" Style="{DynamicResource Pill}" MinWidth="104">
             <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center">
               <TextBlock.Style>

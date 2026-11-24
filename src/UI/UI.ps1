@@ -37,6 +37,33 @@ public class TabulaRow : INotifyPropertyChanged {
     }
 }
 
+function Set-TabulaDpiAwareness {
+    # powershell.exe is not DPI aware, so Windows would bitmap-scale the window and blur it at 125 percent and up.
+    # Must run before the first window of the process. Returns the awareness it ended up with, for the log and tests.
+    [CmdletBinding()]
+    param()
+    if (-not ('TabulaDpi' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class TabulaDpi {
+    [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
+    [DllImport("user32.dll")] public static extern IntPtr GetThreadDpiAwarenessContext();
+    [DllImport("user32.dll")] public static extern int GetAwarenessFromDpiAwarenessContext(IntPtr ctx);
+}
+'@
+    }
+    $names = @{ 0 = 'unaware'; 1 = 'system'; 2 = 'per-monitor' }
+    try {
+        # -4 is PER_MONITOR_AWARE_V2 (Windows 10 1703 and later). It fails if the host already made a window or set a mode.
+        if (-not [TabulaDpi]::SetProcessDpiAwarenessContext([IntPtr](-4))) {
+            Write-TabulaLog 'DPI awareness was already set for this process.' -Level DEBUG
+        }
+        $names[[TabulaDpi]::GetAwarenessFromDpiAwarenessContext([TabulaDpi]::GetThreadDpiAwarenessContext())]
+    }
+    catch { Write-TabulaLog ('could not set DPI awareness: ' + $_.Exception.Message) -Level WARN; 'unknown' }
+}
+
 # ---- XAML and theme ---------------------------------------------------------------------------------
 
 function Get-TabulaXaml {
@@ -575,7 +602,7 @@ function Update-TabulaAppsSummary {
     param()
     $ui = $script:TabulaUi
     $sel = @($ui.AppRows | Where-Object { $_.IsChecked }).Count
-    $ui.AppsSummary.Text = ('{0} apps. {1} selected.' -f $ui.AppRows.Count, $sel)
+    $ui.AppsSummary.Text = ('{0} apps. {1} selected.' -f $ui.AppRows.Count, $sel) + $(if ($ui.NoWinget) { ' winget was not found, so installed state is unknown and installs will fail.' } else { '' })
     Set-TabulaRunButtons
 }
 
@@ -606,6 +633,8 @@ function Start-TabulaInstalledCheck {
             $u = $script:TabulaUi
             if ($m.Kind -eq 'unavailable') {
                 foreach ($r in $u.AppRows) { if ($r.Status -eq 'Checking') { $r.Status = 'No winget'; $r.StatusKind = 'warn' } }
+                $u.NoWinget = $true
+                Update-TabulaAppsSummary
                 return
             }
             $row = $u.AppRowById[$m.Id]
@@ -885,6 +914,8 @@ function Show-TabulaWindow {
     Initialize-TabulaUiTypes
     # A fresh STA runspace gets the functions but not this file's top-level state.
     if ($null -eq $script:TabulaJobs) { $script:TabulaJobs = New-Object System.Collections.ArrayList }
+    $dpi = Set-TabulaDpiAwareness
+    Write-TabulaLog "DPI awareness: $dpi" -Level DEBUG
     $cfg = Get-TabulaConfig -ConfigRoot $ConfigRoot
     $problems = @(Test-TabulaConfig -Config $cfg)
     if ($problems.Count -gt 0) { throw ('config is invalid: ' + ($problems -join '; ')) }
@@ -897,7 +928,7 @@ function Show-TabulaWindow {
     $ui = @{
         Window = $win; Config = $cfg; Profile = $null; Plan = @(); Pages = @{}; Light = $light; Current = 'Setup'; OnReady = $OnReady; Started = $false
         Running = $false; Job = $null; CheckJob = $null; DetectJob = $null; DetectStale = $false; PendingRun = $null; CloseWhenDone = $false
-        RunMode = ''; RunResults = $null; RunRowById = @{}; PlanRows = $null; AppRows = $null; TweakRows = $null; HasRevertible = $false; RevertibleCount = 0; AutoConfirm = $false
+        RunMode = ''; RunResults = $null; RunRowById = @{}; PlanRows = $null; AppRows = $null; TweakRows = $null; HasRevertible = $false; RevertibleCount = 0; AutoConfirm = $false; NoWinget = $false
     }
     $script:TabulaUi = $ui
     foreach ($n in 'PageHost', 'MachineText', 'StatusText', 'StatusProgress', 'NavSetup', 'NavApps', 'NavTweaks', 'NavTools', 'NavAbout') { $ui[$n] = $win.FindName($n) }

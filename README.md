@@ -4,7 +4,7 @@
 
 A personal Windows 10/11 setup tool: detect the machine, apply reversible tweaks, reinstall apps from official sources, undo anything. Windows PowerShell 5.1 and WPF, shipped as a single file.
 
-**Status: M4 (window drives the engine).** The CLI works (`-Mode Auto|Apps|Tweaks|Undo|Export`, `-DryRun`) and `-Mode Gui` (the default) opens a window that can dry run, apply, install selected apps, cancel and undo, with live status per item. The app catalog is verified against winget. The tweak catalog is not verified, so every tweak is off and held back; a run installs apps only. Applying from the window has only been run against a stubbed fixture, not on a real machine; the Tools page actions are not built. See `docs/m1-notes.md` to `docs/m4-notes.md`, `docs/apps-verification.md` and `docs/tweaks-verification.md` for what was and was not tested. Screenshots are in `docs/screens/`.
+**Status: M5 (polish).** The CLI works (`-Mode Auto|Apps|Tweaks|Undo|Export`, `-DryRun`) and `-Mode Gui` (the default) opens a window that can dry run, apply, install selected apps, cancel and undo, with live status per item. The app catalog is verified against winget. The tweak catalog is not verified, so every tweak is off and held back; a run installs apps only. Applying from the window has only been run against a stubbed fixture, not on a real machine; the Tools page actions are not built. See `docs/m1-notes.md` to `docs/m5-notes.md`, `docs/apps-verification.md` and `docs/tweaks-verification.md` for what was and was not tested. Screenshots are in `docs/screens/`.
 
 ## Build
 

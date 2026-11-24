@@ -312,7 +312,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="Expander">
           <DockPanel>
-            <ToggleButton x:Name="Head" DockPanel.Dock="Top" IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+            <ToggleButton x:Name="Head" DockPanel.Dock="Top" Content="{TemplateBinding Header}" IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                           Cursor="Hand" Focusable="True" FocusVisualStyle="{x:Null}" Foreground="{DynamicResource TextDimBrush}" FontWeight="SemiBold" FontSize="11">
               <ToggleButton.Template>
                 <ControlTemplate TargetType="ToggleButton">
@@ -331,7 +331,6 @@
                   </ControlTemplate.Triggers>
                 </ControlTemplate>
               </ToggleButton.Template>
-              <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
             </ToggleButton>
             <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
           </DockPanel>
