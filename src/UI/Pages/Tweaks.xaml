@@ -1,0 +1,65 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid.Resources>
+    <DataTemplate x:Key="TweakRow">
+      <Border Style="{DynamicResource RowCard}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <CheckBox Grid.Column="0" Style="{DynamicResource ToggleSwitch}" IsChecked="{Binding IsChecked, Mode=TwoWay}" IsEnabled="{Binding IsEnabled}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}"/>
+          <StackPanel Grid.Column="1" Margin="14,0,12,0">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Description}" Style="{DynamicResource Caption}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Reason}" Margin="0,3,0,0" TextWrapping="Wrap">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="FontSize" Value="11"/>
+                  <Setter Property="Foreground" Value="{DynamicResource WarnBrush}"/>
+                  <Style.Triggers><DataTrigger Binding="{Binding Reason}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Hint}" Style="{DynamicResource Caption}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Border Style="{DynamicResource Pill}"><TextBlock Text="{Binding Risk}" FontSize="11" FontWeight="SemiBold"/></Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Grid.Resources>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+  <StackPanel Grid.Row="0" Margin="0,0,0,14">
+    <TextBlock Text="Tweaks" Style="{DynamicResource Title}"/>
+    <TextBlock x:Name="TweaksSummary" Style="{DynamicResource Dim}" Margin="0,6,0,0"/>
+  </StackPanel>
+
+  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="0,0,10,0">
+      <StackPanel x:Name="TweakGroups"/>
+      <TextBlock x:Name="TweaksEmpty" Style="{DynamicResource Dim}" Margin="2,0,0,18" Visibility="Collapsed"
+                 Text="No verified tweaks yet. Nothing here changes Windows until one has been tested."/>
+      <Expander x:Name="ExperimentalExpander" Header="EXPERIMENTAL (UNVERIFIED)" AutomationProperties.Name="Experimental tweaks">
+        <StackPanel Margin="0,4,0,0">
+          <Border Style="{DynamicResource Card}" Margin="0,0,0,10" BorderBrush="{DynamicResource WarnBrush}">
+            <TextBlock Style="{DynamicResource Dim}" Text="These tweaks were written from knowledge and have not been tested on Windows. They may do nothing, or something you did not expect. They are off by default and applying them from this window is not wired up yet."/>
+          </Border>
+          <StackPanel x:Name="ExperimentalGroups"/>
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+
+  <Border x:Name="StageBar" Grid.Row="2" Style="{DynamicResource Card}" Margin="0,12,0,0" Visibility="Collapsed">
+    <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock x:Name="StageText" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <Button x:Name="BtnStageApply" Style="{DynamicResource PrimaryButton}" Content="Apply changes" IsEnabled="False" ToolTip="Applying from the window arrives in M4." AutomationProperties.Name="Apply staged changes"/>
+        <Button x:Name="BtnStageDiscard" Style="{DynamicResource GhostButton}" Content="Discard" Margin="8,0,0,0" AutomationProperties.Name="Discard staged changes"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Grid>

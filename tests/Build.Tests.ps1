@@ -22,11 +22,13 @@ Describe 'M0 build' {
         ($out | Out-String) | Should -Match '^Tabula 0\.0\.1 \(built .+, commit .+\)'
     }
 
-    It 'runs through iex' {
-        $out = & powershell.exe -NoProfile -Command "Get-Content -Raw '$dist' | Invoke-Expression"
-        ($out | Out-String) | Should -Match 'The GUI is not built yet'
+    It 'runs through iex (GUI mode, closes itself)' {
+        $env:TABULA_UI_AUTOCLOSE_MS = '1500'
+        try { $out = & powershell.exe -NoProfile -STA -Command "Get-Content -Raw '$dist' | Invoke-Expression; exit `$LASTEXITCODE" 2>&1 | Out-String }
+        finally { Remove-Item Env:\TABULA_UI_AUTOCLOSE_MS -ErrorAction SilentlyContinue }
+        $LASTEXITCODE | Should -Be 0
+        $out | Should -Not -Match 'Exception|Error'
     }
-
     It 'accepts parameters through a script block, and a dry run exits 0' {
         $log = Join-Path $TestDrive 'dry.log'
         $cmd = "& ([scriptblock]::Create((Get-Content -Raw '$dist'))) -Mode Auto -DryRun -LogPath '$log'; exit `$LASTEXITCODE"

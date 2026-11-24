@@ -1,0 +1,62 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid.Resources>
+    <DataTemplate x:Key="AppRow">
+      <Border Style="{DynamicResource RowCard}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked, Mode=TwoWay}" IsEnabled="{Binding IsEnabled}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}"/>
+          <StackPanel Grid.Column="1" Margin="12,0,12,0">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Description}" Style="{DynamicResource Caption}" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+          <TextBlock Grid.Column="2" Text="{Binding Sub}" Style="{DynamicResource Caption}" VerticalAlignment="Center" Margin="0,0,12,0" MaxWidth="170" TextTrimming="CharacterEllipsis"/>
+          <Button Grid.Column="3" Style="{DynamicResource GhostButton}" Content="Site" Tag="{Binding Url}" Padding="10,4" FontSize="12" Margin="0,0,10,0" ToolTip="{Binding Url}" AutomationProperties.Name="Official site"/>
+          <Border Grid.Column="4" Style="{DynamicResource Pill}" MinWidth="104">
+            <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="ok"><Setter Property="Foreground" Value="{DynamicResource OkBrush}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="warn"><Setter Property="Foreground" Value="{DynamicResource WarnBrush}"/></DataTrigger>
+                    <DataTrigger Binding="{Binding StatusKind}" Value="err"><Setter Property="Foreground" Value="{DynamicResource ErrBrush}"/></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Border>
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </Grid.Resources>
+  <Grid.RowDefinitions>
+    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+  </Grid.RowDefinitions>
+
+  <StackPanel Grid.Row="0" Margin="0,0,0,14">
+    <TextBlock Text="Apps" Style="{DynamicResource Title}"/>
+    <TextBlock x:Name="AppsSummary" Style="{DynamicResource Dim}" Margin="0,6,0,0"/>
+  </StackPanel>
+
+  <StackPanel Grid.Row="1" Margin="0,0,0,6">
+    <TextBox x:Name="SearchBox" Tag="Search apps  (Ctrl+F)" Width="320" HorizontalAlignment="Left" Margin="0,0,0,12" AutomationProperties.Name="Search apps"/>
+    <WrapPanel x:Name="CategoryChips"/>
+  </StackPanel>
+
+  <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel>
+      <ItemsControl x:Name="AppList" ItemTemplate="{StaticResource AppRow}" Focusable="False" Margin="0,0,10,0"/>
+      <TextBlock x:Name="AppsEmpty" Style="{DynamicResource Dim}" Text="Nothing matches." Visibility="Collapsed" Margin="2,6,0,0"/>
+    </StackPanel>
+  </ScrollViewer>
+
+  <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,14,0,0">
+    <Button x:Name="BtnInstall" Style="{DynamicResource PrimaryButton}" Content="Install selected" IsEnabled="False" ToolTip="Installing from the window arrives in M4." AutomationProperties.Name="Install selected"/>
+    <Button x:Name="BtnPreset" Style="{DynamicResource SecondaryButton}" Content="Select preset" Margin="10,0,0,0" ToolTip="Tick the apps the chosen preset installs." AutomationProperties.Name="Select preset"/>
+    <Button x:Name="BtnExport" Style="{DynamicResource SecondaryButton}" Content="Export installed apps" Margin="10,0,0,0" ToolTip="Writes the apps installed on this PC to a file in the same format as the app list." AutomationProperties.Name="Export installed apps"/>
+    <Button x:Name="BtnRefresh" Style="{DynamicResource GhostButton}" Content="Refresh" Margin="10,0,0,0" ToolTip="Check what is installed again." AutomationProperties.Name="Refresh installed state"/>
+  </StackPanel>
+</Grid>

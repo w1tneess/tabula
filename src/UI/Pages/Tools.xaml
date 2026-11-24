@@ -1,0 +1,63 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel Grid.Row="0" Margin="0,0,0,14">
+    <TextBlock Text="Tools" Style="{DynamicResource Title}"/>
+    <TextBlock Style="{DynamicResource Dim}" Margin="0,6,0,0" Text="One-off actions. Anything that deletes or resets asks first."/>
+  </StackPanel>
+
+  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="0,0,10,0">
+      <TextBlock Text="MAINTENANCE" Style="{DynamicResource Section}" Margin="0,4,0,8"/>
+
+      <Border Style="{DynamicResource RowCard}"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Clean temporary files" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="User and Windows temp folders. Shows the size before deleting."/></StackPanel>
+        <Button x:Name="BtnToolTemp" Grid.Column="1" Content="Run" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="Clean temporary files"/>
+      </Grid></Border>
+
+      <Border Style="{DynamicResource RowCard}"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Flush DNS" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="Clear the DNS resolver cache."/></StackPanel>
+        <Button x:Name="BtnToolDns" Grid.Column="1" Content="Run" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="Flush DNS"/>
+      </Grid></Border>
+
+      <Border Style="{DynamicResource RowCard}"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Reset network stack" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="Winsock and IP reset. Needs a restart."/></StackPanel>
+        <Button x:Name="BtnToolNet" Grid.Column="1" Content="Run" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="Reset network stack"/>
+      </Grid></Border>
+
+      <Border Style="{DynamicResource RowCard}"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="System file check and repair" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="sfc /scannow, then DISM RestoreHealth. Takes a while."/></StackPanel>
+        <Button x:Name="BtnToolSfc" Grid.Column="1" Content="Run" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="System file check and repair"/>
+      </Grid></Border>
+
+      <Border Style="{DynamicResource RowCard}"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Windows Update" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="Pause for a number of days, resume, set active hours. Never turns the service off."/></StackPanel>
+        <Button x:Name="BtnToolUpdate" Grid.Column="1" Content="Run" IsEnabled="False" ToolTip="Arrives in M4." AutomationProperties.Name="Windows Update controls"/>
+      </Grid></Border>
+
+      <Border x:Name="DemoCard" Style="{DynamicResource RowCard}" Visibility="Collapsed"><Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Responsiveness check" FontWeight="SemiBold"/><TextBlock Style="{DynamicResource Caption}" Text="Runs a three second fake task in the background. Development only."/></StackPanel>
+        <Button x:Name="BtnToolDemo" Grid.Column="1" Content="Run" AutomationProperties.Name="Responsiveness check"/>
+      </Grid></Border>
+
+      <TextBlock Text="OPEN" Style="{DynamicResource Section}" Margin="0,20,0,8"/>
+      <WrapPanel>
+        <Button x:Name="BtnOpenRestore" Content="Restore points" Margin="0,0,8,8" AutomationProperties.Name="Open restore points"/>
+        <Button x:Name="BtnOpenStartup" Content="Startup apps" Margin="0,0,8,8" AutomationProperties.Name="Open startup apps"/>
+        <Button x:Name="BtnOpenFeatures" Content="Optional features" Margin="0,0,8,8" AutomationProperties.Name="Open optional features"/>
+        <Button x:Name="BtnOpenUninstall" Content="Uninstall programs" Margin="0,0,8,8" AutomationProperties.Name="Open uninstall programs"/>
+      </WrapPanel>
+    </StackPanel>
+  </ScrollViewer>
+
+  <Border Grid.Row="2" Style="{DynamicResource Card}" Margin="0,10,0,0" Padding="0">
+    <TextBox x:Name="ToolLog" IsReadOnly="True" Height="90" FontFamily="{DynamicResource MonoFont}" FontSize="12" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
+             Tag="Output appears here." AcceptsReturn="True" AutomationProperties.Name="Tool output"/>
+  </Border>
+</Grid>

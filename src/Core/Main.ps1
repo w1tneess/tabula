@@ -16,11 +16,11 @@ function Invoke-TabulaMain {
         [switch]$Yes, [switch]$IncludeHighRisk, [string]$LogPath
     )
     try {
-        $logFile = Initialize-TabulaLog -Path $LogPath -DebugEnabled:($VerbosePreference -eq 'Continue')
+        $logFile = Initialize-TabulaLog -Path $LogPath -DebugEnabled:($VerbosePreference -eq 'Continue') -Quiet:($Mode -eq 'Gui')
         Write-TabulaLog ('Tabula {0}, mode {1}{2}. Log: {3}' -f $script:TabulaBuild.Version, $Mode, $(if ($DryRun) { ', dry run' } else { '' }), $logFile)
 
         if ($Mode -eq 'Gui') {
-            Write-TabulaLog 'The GUI is not built yet. Use -Mode Auto, Apps, Tweaks, Undo or Export.' -Level WARN
+            Start-TabulaGui
             return 0
         }
 
