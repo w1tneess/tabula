@@ -284,6 +284,8 @@ Describe 'Plan runner, dry run and CLI' {
     Context 'Invoke-TabulaMain' {
         BeforeEach {
             Mock Get-TabulaConfig { $script:cfg }
+            # These hand-built configs are minimal on purpose; the validator has its own tests in Config.Tests.ps1.
+            Mock Test-TabulaConfig { @() }
             Mock Get-TabulaProfile { $script:profile1 }
         }
         It 'dry run exits 0 without elevation and changes nothing' {
@@ -300,6 +302,11 @@ Describe 'Plan runner, dry run and CLI' {
             $p = New-TestProfile; $p.Supported = $false; $p.SupportReason = 'Needs Windows 10 version 2004 or later.'
             Mock Get-TabulaProfile { $p }
             Invoke-TabulaMain -Mode Auto -DryRun -LogPath (Join-Path $TestDrive 'm.log') | Should -Be 2
+        }
+        It 'exits 2 and lists the problems when the catalog is invalid' {
+            Mock Test-TabulaConfig { @('app x: missing name') }
+            Invoke-TabulaMain -Mode Auto -DryRun -LogPath (Join-Path $TestDrive 'm.log') | Should -Be 2
+            (Get-TabulaLogLines) -join "`n" | Should -Match 'config: app x: missing name'
         }
         It 'exits 3 when the user declines a risky plan' {
             $risky = New-TestTweak 'med' @((New-TestRegAction 'Cli' 'M' 1)) @{ risk = 'medium' }

@@ -30,6 +30,11 @@ function Invoke-TabulaMain {
         if (-not $machine.Supported) { Write-TabulaLog $machine.SupportReason -Level ERROR; return 2 }
 
         $config = Get-TabulaConfig
+        $problems = @(Test-TabulaConfig -Config $config)
+        if ($problems.Count -gt 0) {
+            foreach ($p in $problems) { Write-TabulaLog "config: $p" -Level ERROR }
+            return 2
+        }
         $changesSystem = ($Mode -ne 'Export') -and -not $DryRun
 
         if ($Mode -eq 'Export') {

@@ -93,7 +93,9 @@ function Resolve-TabulaPlan {
             $a = $byId[$id]
             # Dependencies go in first (a runtime before the app that needs it).
             foreach ($r in @($a['requires'] | Where-Object { $null -ne $_ })) { & $addApp ([string]$r) }
-            $plan.Add([pscustomobject]@{ Kind = 'app'; Id = $id; Name = [string]$a['name']; Risk = 'low'; Item = $a; Hold = $null })
+            $applies = Test-TabulaApplies -Tweak $a -Profile $Profile
+            $hold = if ($applies.Applies) { $null } else { 'not applicable: ' + $applies.Reason }
+            $plan.Add([pscustomobject]@{ Kind = 'app'; Id = $id; Name = [string]$a['name']; Risk = 'low'; Item = $a; Hold = $hold })
         }
         foreach ($i in $appIds) { & $addApp $i }
     }

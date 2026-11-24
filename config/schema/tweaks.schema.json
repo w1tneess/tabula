@@ -1,10 +1,60 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Tabula tweaks.json (stub, completed in M2)",
+  "title": "Tabula tweaks.json",
+  "description": "For editors and other tools. The rules that run are in src/Core/Config.ps1 (Test-TabulaConfig): protected list, verified/defaultOn/risk rules, unique IDs.",
   "type": "object",
   "required": ["schemaVersion", "tweaks"],
+  "additionalProperties": false,
   "properties": {
     "schemaVersion": { "const": 1 },
-    "tweaks": { "type": "array" }
+    "tweaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "description", "risk", "defaultOn", "verified", "actions", "detect", "undo"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["Privacy", "Performance", "Interface", "Power", "Network", "Updates", "Gaming"] },
+          "description": { "type": "string", "minLength": 1 },
+          "risk": { "enum": ["low", "medium", "high"] },
+          "appliesTo": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "minBuild": { "type": "integer" },
+              "maxBuild": { "type": "integer" },
+              "editions": { "type": "array", "items": { "enum": ["Home", "Pro", "Enterprise", "Education"] } },
+              "chassis": { "enum": ["laptop", "desktop"] },
+              "storage": { "enum": ["ssd", "hdd"] }
+            }
+          },
+          "requiresRestart": { "enum": ["none", "explorer", "signout", "reboot"] },
+          "defaultOn": { "type": "boolean" },
+          "intendedDefaultOn": { "type": "boolean", "description": "What defaultOn becomes once the tweak is verified." },
+          "verified": { "type": "boolean" },
+          "testedBuilds": { "type": "array", "items": { "type": "integer" } },
+          "detect": { "const": "actions" },
+          "undo": { "const": "restore-prior" },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "properties": { "type": { "enum": ["registry", "service", "scheduledTask", "powercfg", "function"] } },
+              "oneOf": [
+                { "properties": { "type": { "const": "registry" }, "hive": { "enum": ["HKCU", "HKLM"] }, "path": { "type": "string" }, "name": { "type": "string" }, "valueType": { "enum": ["DWord", "String", "ExpandString", "QWord", "Binary", "MultiString"] }, "value": {}, "createKey": { "type": "boolean" } }, "required": ["hive", "path", "name", "valueType", "value"] },
+                { "properties": { "type": { "const": "service" }, "name": { "type": "string" }, "startType": { "enum": ["Automatic", "Manual", "Disabled"] } }, "required": ["name", "startType"] },
+                { "properties": { "type": { "const": "scheduledTask" }, "path": { "type": "string" }, "name": { "type": "string" }, "state": { "enum": ["Enabled", "Disabled"] } }, "required": ["path", "name", "state"] },
+                { "properties": { "type": { "const": "powercfg" }, "op": { "enum": ["setActiveScheme", "duplicateScheme", "hibernate"] }, "scheme": { "type": "string" }, "guid": { "type": "string" }, "value": { "enum": ["on", "off"] } }, "required": ["op"] },
+                { "properties": { "type": { "const": "function" }, "name": { "type": "string" } }, "required": ["name"] }
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }

@@ -1,4 +1,33 @@
 {
   "schemaVersion": 1,
-  "apps": []
+  "apps": [
+    { "id": "chrome", "name": "Google Chrome", "category": "Browsers", "description": "Web browser.", "source": "winget", "wingetId": "Google.Chrome", "publisher": "Google LLC", "officialUrl": "https://www.google.com/chrome/", "defaultSelected": true },
+    { "id": "brave", "name": "Brave", "category": "Browsers", "description": "Privacy-focused web browser.", "source": "winget", "wingetId": "Brave.Brave", "publisher": "Brave Software Inc", "officialUrl": "https://brave.com/", "defaultSelected": true },
+
+    { "id": "vscode", "name": "Visual Studio Code", "category": "Development", "description": "Code editor.", "source": "winget", "wingetId": "Microsoft.VisualStudioCode", "publisher": "Microsoft Corporation", "officialUrl": "https://code.visualstudio.com/", "defaultSelected": true },
+    { "id": "git", "name": "Git", "category": "Development", "description": "Version control.", "source": "winget", "wingetId": "Git.Git", "publisher": "The Git Development Community", "officialUrl": "https://git-scm.com/", "defaultSelected": true, "notes": "winget lists gitforwindows.org as the homepage; git-scm.com is the project site." },
+    { "id": "github-cli", "name": "GitHub CLI", "category": "Development", "description": "GitHub from the command line.", "source": "winget", "wingetId": "GitHub.cli", "publisher": "GitHub, Inc.", "officialUrl": "https://cli.github.com/", "defaultSelected": true },
+    { "id": "nodejs", "name": "Node.js LTS", "category": "Development", "description": "JavaScript runtime, long-term support line.", "source": "winget", "wingetId": "OpenJS.NodeJS.LTS", "publisher": "Node.js Foundation", "officialUrl": "https://nodejs.org/", "defaultSelected": true },
+    { "id": "python", "name": "Python 3", "category": "Development", "description": "Python interpreter.", "source": "winget", "wingetId": "Python.Python.3.15", "publisher": "Python Software Foundation", "officialUrl": "https://www.python.org/", "defaultSelected": true, "notes": "The winget ID carries the minor version. Checked 2026-11-24: 3.15 is the newest listed, 3.14 is the previous." },
+    { "id": "windows-terminal", "name": "Windows Terminal", "category": "Development", "description": "Terminal. Ships with Windows 11.", "source": "winget", "wingetId": "Microsoft.WindowsTerminal", "publisher": "Microsoft Corporation", "officialUrl": "https://aka.ms/terminal", "defaultSelected": true, "appliesTo": { "maxBuild": 19045 } },
+    { "id": "powershell7", "name": "PowerShell 7", "category": "Development", "description": "Cross-platform PowerShell.", "source": "winget", "wingetId": "Microsoft.PowerShell", "publisher": "Microsoft Corporation", "officialUrl": "https://github.com/PowerShell/PowerShell", "defaultSelected": false },
+
+    { "id": "notepadpp", "name": "Notepad++", "category": "Utilities", "description": "Text editor.", "source": "winget", "wingetId": "Notepad++.Notepad++", "publisher": "Notepad++ Team", "officialUrl": "https://notepad-plus-plus.org/", "defaultSelected": true },
+    { "id": "7zip", "name": "7-Zip", "category": "Utilities", "description": "File archiver.", "source": "winget", "wingetId": "7zip.7zip", "publisher": "Igor Pavlov", "officialUrl": "https://www.7-zip.org/", "defaultSelected": true },
+    { "id": "powertoys", "name": "PowerToys", "category": "Utilities", "description": "Windows power-user utilities.", "source": "winget", "wingetId": "Microsoft.PowerToys", "publisher": "Microsoft Corporation", "officialUrl": "https://github.com/microsoft/PowerToys", "defaultSelected": true },
+    { "id": "everything", "name": "Everything", "category": "Utilities", "description": "Instant file search.", "source": "winget", "wingetId": "voidtools.Everything", "publisher": "voidtools", "officialUrl": "https://www.voidtools.com/", "defaultSelected": true },
+
+    { "id": "vlc", "name": "VLC media player", "category": "Media", "description": "Media player.", "source": "winget", "wingetId": "VideoLAN.VLC", "publisher": "VideoLAN", "officialUrl": "https://www.videolan.org/vlc/", "defaultSelected": true },
+    { "id": "obs", "name": "OBS Studio", "category": "Media", "description": "Recording and streaming.", "source": "winget", "wingetId": "OBSProject.OBSStudio", "publisher": "OBS Project", "officialUrl": "https://obsproject.com/", "defaultSelected": false },
+    { "id": "spotify", "name": "Spotify", "category": "Media", "description": "Music streaming.", "source": "winget", "wingetId": "Spotify.Spotify", "publisher": "Spotify AB", "officialUrl": "https://www.spotify.com/download/", "defaultSelected": true, "notes": "Per-user installer that self-updates. Not tested under an elevated install." },
+
+    { "id": "discord", "name": "Discord", "category": "Communication", "description": "Chat.", "source": "winget", "wingetId": "Discord.Discord", "publisher": "Discord Inc.", "officialUrl": "https://discord.com/download", "defaultSelected": true, "notes": "Per-user installer that self-updates." },
+    { "id": "telegram", "name": "Telegram Desktop", "category": "Communication", "description": "Messaging.", "source": "winget", "wingetId": "Telegram.TelegramDesktop", "publisher": "Telegram FZ-LLC", "officialUrl": "https://desktop.telegram.org/", "defaultSelected": true },
+
+    { "id": "steam", "name": "Steam", "category": "Gaming", "description": "Game library and store.", "source": "winget", "wingetId": "Valve.Steam", "publisher": "Valve Corporation", "officialUrl": "https://store.steampowered.com/about/", "defaultSelected": true, "notes": "Self-updating." },
+
+    { "id": "tailscale", "name": "Tailscale", "category": "Network", "description": "Private network between your devices.", "source": "winget", "wingetId": "Tailscale.Tailscale", "publisher": "Tailscale Inc.", "officialUrl": "https://tailscale.com/download", "defaultSelected": true },
+    { "id": "cloudflare-warp", "name": "Cloudflare WARP", "category": "Network", "description": "Cloudflare DNS and VPN client.", "source": "winget", "wingetId": "Cloudflare.Warp", "publisher": "Cloudflare, Inc.", "officialUrl": "https://one.one.one.one/", "defaultSelected": false },
+    { "id": "qbittorrent", "name": "qBittorrent", "category": "Network", "description": "BitTorrent client.", "source": "winget", "wingetId": "qBittorrent.qBittorrent", "publisher": "The qBittorrent project", "officialUrl": "https://www.qbittorrent.org/", "defaultSelected": false }
+  ]
 }

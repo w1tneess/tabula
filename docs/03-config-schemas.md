@@ -53,6 +53,8 @@ Fields:
 | `requires` | no | IDs of other apps to install first (e.g. a runtime). |
 | `notes` | no | Free text. |
 
+As built in M2: an app may also carry `appliesTo` (same keys as a tweak's, for example `{ "maxBuild": 19045 }` for Windows 10 only). A plan holds such an app with the reason instead of installing it. `scope` is passed to winget only when set.
+
 Install command pattern (engine builds it, never from JSON strings):
 ```
 winget install --id <wingetId> -e --accept-package-agreements --accept-source-agreements --silent [--scope machine]
@@ -107,6 +109,8 @@ Fields:
 | `actions` | yes | Ordered list of structured actions (below). |
 | `detect` | yes | `actions` (compare current state to the target values) or a named detector function from the allow-list. |
 | `undo` | yes | `restore-prior` (use recorded prior state) or `explicit` (with `undoActions`). Prefer `restore-prior`. |
+
+As built in M2: `intendedDefaultOn` (optional boolean) records what `defaultOn` should become once the tweak is verified. While `verified` is false, `defaultOn` must be false. `detect` must be `"actions"` and `undo` must be `"restore-prior"`; the validator rejects the other forms because the engine does not implement them yet.
 
 ### Action types (v1)
 - `registry`: `hive` (HKCU, HKLM), `path`, `name`, `valueType` (DWord, String, ExpandString, QWord, Binary, MultiString), `value`, `createKey`. Prior state records: key existed, value existed, old value and type.

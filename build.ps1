@@ -39,6 +39,11 @@ $config = foreach ($f in 'apps', 'tweaks', 'presets') {
     [pscustomobject]@{ Name = "$f.json"; Text = $text }
 }
 
+# Same validator the shipped script runs at start-up, so a bad catalog fails the build, not a user's run.
+foreach ($f in (Get-ChildItem (Join-Path $root 'src\Core') -Filter *.ps1 | Sort-Object Name)) { . $f.FullName }
+$problems = @(Test-TabulaConfig -Config (Get-TabulaConfig -ConfigRoot (Join-Path $root 'config')))
+if ($problems.Count -gt 0) { $problems | ForEach-Object { Write-Error $_ -ErrorAction Continue }; throw "config/*.json has $($problems.Count) validation error(s)" }
+
 $version = (Read-SourceFile (Join-Path $root 'VERSION')).Trim()
 $commit = 'nogit'
 try { $c = git -C $root rev-parse --short HEAD 2>$null; if ($LASTEXITCODE -eq 0 -and $c) { $commit = $c } } catch { }

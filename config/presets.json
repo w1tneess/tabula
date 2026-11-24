@@ -10,6 +10,13 @@
       "overrides": {
         "laptop": { "excludeTweaks": ["ultimate-performance-plan"] }
       }
+    },
+    {
+      "id": "Minimal",
+      "name": "Minimal",
+      "description": "Only low-risk, visible-benefit changes. Core apps.",
+      "apps": ["chrome", "7zip", "vlc", "vscode"],
+      "tweaks": ["file-extensions", "hidden-files", "disable-ad-id", "classic-context-menu"]
     }
   ]
 }

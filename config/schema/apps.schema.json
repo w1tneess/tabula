@@ -1,10 +1,50 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Tabula apps.json (stub, completed in M2)",
+  "title": "Tabula apps.json",
+  "description": "For editors and other tools. The rules that run are in src/Core/Config.ps1 (Test-TabulaConfig), which also checks cross-references.",
   "type": "object",
   "required": ["schemaVersion", "apps"],
+  "additionalProperties": false,
   "properties": {
     "schemaVersion": { "const": 1 },
-    "apps": { "type": "array" }
+    "apps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "source", "officialUrl", "defaultSelected"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "name": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["Browsers", "Development", "Communication", "Media", "Gaming", "Utilities", "Network", "Productivity", "Creative"] },
+          "description": { "type": "string" },
+          "source": { "enum": ["winget", "manual"] },
+          "wingetId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$" },
+          "publisher": { "type": "string" },
+          "officialUrl": { "type": "string", "pattern": "^https://[^\\s/]+" },
+          "defaultSelected": { "type": "boolean" },
+          "scope": { "enum": ["machine", "user"] },
+          "extraArgs": { "type": "array", "items": { "type": "string" } },
+          "requires": { "type": "array", "items": { "type": "string" } },
+          "appliesTo": { "$ref": "#/definitions/appliesTo" },
+          "notes": { "type": "string" }
+        },
+        "if": { "properties": { "source": { "const": "winget" } } },
+        "then": { "required": ["wingetId"] }
+      }
+    }
+  },
+  "definitions": {
+    "appliesTo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minBuild": { "type": "integer" },
+        "maxBuild": { "type": "integer" },
+        "editions": { "type": "array", "items": { "enum": ["Home", "Pro", "Enterprise", "Education"] } },
+        "chassis": { "enum": ["laptop", "desktop"] },
+        "storage": { "enum": ["ssd", "hdd"] }
+      }
+    }
   }
 }
