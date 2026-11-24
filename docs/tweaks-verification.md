@@ -1,6 +1,6 @@
 # Tweaks verification
 
-Status 2026-11-24: **no tweak is verified.** There is no VM or Windows Sandbox available, and the rules forbid applying an unverified tweak on a real system. Every tweak in `config/tweaks.json` therefore ships with `verified: false`, `defaultOn: false` and an empty `testedBuilds`. The preset rule "unverified tweaks are held" means a run reports them as skipped (unverified, experimental) and changes nothing.
+Status 2026-11-24: **3 of 21 tweaks are verified (dark-mode, disable-activity-history, telemetry-minimum); see the end of this file.** The text below describes the state before the Sandbox run and source check. There is no VM or Windows Sandbox available, and the rules forbid applying an unverified tweak on a real system. Before the Sandbox run every tweak in `config/tweaks.json` shipped with `verified: false`, `defaultOn: false` and an empty `testedBuilds`. The preset rule "unverified tweaks are held" means a run reports them as skipped (unverified, experimental) and changes nothing.
 
 `intendedDefaultOn` records what the starter catalog wanted. When a tweak is verified, set `verified: true`, fill `testedBuilds`, and set `defaultOn` to its `intendedDefaultOn`.
 
@@ -83,3 +83,11 @@ Searched Microsoft Learn (Policy CSP pages, "Reference for Windows 11 and Window
 | ultimate-performance-plan, balanced-plan, hibernate-off | not searched | Need real hardware first. |
 
 Nothing was marked `verified`. The three tweaks that are fully documented and passed in the Sandbox (dark-mode, disable-activity-history, telemetry-minimum) are the candidates, with the caveats above. What was observed in the Sandbox is the registry state, not the visible effect.
+
+## Verified, 2026-11-24
+`dark-mode`, `disable-activity-history` and `telemetry-minimum` are now `verified: true` with `testedBuilds: [26100]`. Evidence: Microsoft documents the key, value and meaning (see the source check above), and the real engine applied and undid each one in Windows Sandbox on build 26100 (Windows 11 Enterprise 24H2). The effect observed was the registry state, not the visible result.
+
+- `disable-activity-history` and `telemetry-minimum` have `defaultOn: true` (their `intendedDefaultOn`), so the Standard preset applies them. `dark-mode` stays opt-in (`intendedDefaultOn` was false).
+- Limits that still apply: `telemetry-minimum` only reaches the Security level on Enterprise and Education, and equals Basic on Home and Pro. `disable-activity-history` is documented for Pro, Enterprise and Education, not Home. Both write to HKLM and need an elevated run.
+- Not tested on Windows 10, on Home or Pro, or on real hardware.
+- The other 18 tweaks stay `verified: false`. A test (`Config.Tests.ps1`) fails if another tweak is verified without this list being updated.

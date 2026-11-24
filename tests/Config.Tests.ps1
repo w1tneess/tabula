@@ -77,11 +77,14 @@ Describe 'App applicability in plans' {
         ($win10 | Where-Object Id -eq 'windows-terminal').Hold | Should -BeNullOrEmpty
     }
 
-    It 'holds every shipped tweak as unverified, so nothing applies by default' {
+    It 'verifies only the three tweaks whose Microsoft source and Sandbox run are recorded' {
         $cfg = Get-TabulaConfig -ConfigRoot (Join-Path (Split-Path -Parent $PSScriptRoot) 'config')
-        @($cfg.tweaks | Where-Object { $_['verified'] }).Count | Should -Be 0
-        @($cfg.tweaks | Where-Object { $_['defaultOn'] }).Count | Should -Be 0
+        # docs/tweaks-verification.md: documented by Microsoft and applied and undone on build 26100. Add to this list only with that evidence.
+        @($cfg.tweaks | Where-Object { $_['verified'] } | ForEach-Object { $_['id'] } | Sort-Object) | Should -Be @('dark-mode', 'disable-activity-history', 'telemetry-minimum')
+        foreach ($t in @($cfg.tweaks | Where-Object { $_['verified'] })) { @($t['testedBuilds']) | Should -Contain 26100 }
+        # Default-on is the verified tweaks that were meant to be on by default; dark mode is opt-in.
+        @($cfg.tweaks | Where-Object { $_['defaultOn'] } | ForEach-Object { $_['id'] } | Sort-Object) | Should -Be @('disable-activity-history', 'telemetry-minimum')
         $plan = Resolve-TabulaPlan -Config $cfg -Profile (New-TestProfile) -Preset Minimal -Scope Tweaks
-        @($plan | Where-Object { -not $_.Hold }).Count | Should -Be 0
+        @($plan | Where-Object { -not $_.Hold }).Count | Should -Be 0   # Minimal names only unverified tweaks
     }
 }
