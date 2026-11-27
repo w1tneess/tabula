@@ -62,6 +62,8 @@ Describe 'Test-TabulaConfig' {
         Copy-Item (Join-Path (Split-Path -Parent $PSScriptRoot) 'build.ps1'), (Join-Path (Split-Path -Parent $PSScriptRoot) 'VERSION') $tmp
         $apps = Get-Content (Join-Path $tmp 'config\apps.json') -Raw
         Set-Content (Join-Path $tmp 'config\apps.json') ($apps -replace '"officialUrl": "https://www.google.com/chrome/"', '"officialUrl": "http://www.google.com/chrome/"')
+        # Pester 5 runs It blocks with ErrorAction Stop, which turns the build's stderr (2>&1) into a thrown error.
+        $ErrorActionPreference = 'Continue'
         $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $tmp 'build.ps1') -OutDir (Join-Path $tmp 'out') 2>&1 | Out-String
         $LASTEXITCODE | Should -Not -Be 0
         $out | Should -Match 'must be https'

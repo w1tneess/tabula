@@ -70,6 +70,7 @@ Describe 'State folder trust' {
 
     It 'does not fail for a caller who cannot read the ACL' {
         Mock Get-Acl { throw (New-Object UnauthorizedAccessException 'Attempted to perform an unauthorized operation.') }
+        Mock Test-TabulaElevated { $false }   # the CI runner is an administrator; this case is about a non-elevated caller
         $dir = Join-Path $TestDrive 'locked'
         New-ClosedFolder $dir
         { Assert-TabulaStateFolder -Folder $dir } | Should -Not -Throw
