@@ -46,4 +46,4 @@ Date 2026-11-24, Windows 11 Pro build 26300, Windows PowerShell 5.1, not elevate
 - UI state is one hashtable, `$script:TabulaUi`; event handlers read it instead of function locals.
 - `TabulaRow` is a small C# class compiled with `Add-Type`, because PowerShell objects cannot raise the change notifications WPF bindings need.
 - Test hooks: `TABULA_UI_AUTOCLOSE_MS` closes the window after N ms, and `TABULA_UI_DEMO=1` shows a "Responsiveness check" card on Tools. Neither is a user setting.
-- The screenshots show which apps are installed on this PC (the Installed / Not installed pills). The About screenshots show a neutral log path. Delete `docs/screens/` or regenerate them if you do not want that in a public repository.
+- The M3 screenshots first showed which apps were installed on this PC and the state of its tweaks. They were regenerated on 2026-11-27 for the current build with `tests/UiRunHarness.ps1 -Mode Shots -Theme Dark|Light -ShotDir <folder>`: real catalog, no app counted as installed, every tweak off, neutral log path. The earlier versions remain in git history.

@@ -1,7 +1,7 @@
 # Run in its own STA process by UI.Tests.ps1. Opens the real window off-screen, clicks the real buttons and prints one JSON line.
 # Everything the engine changes lives under HKCU:\Software\TabulaTest. winget, the restore point and the elevation flag are
 # stubbed here (functions defined before the window opens are copied into its job runspaces), so nothing real is installed.
-param([ValidateSet('Flow', 'NotAdmin', 'Real', 'NoWinget', 'Unsupported')][string]$Mode = 'Flow', [ValidateSet('Dark', 'Light')][string]$Theme = 'Dark', [string]$ShotDir)
+param([ValidateSet('Flow', 'NotAdmin', 'Real', 'NoWinget', 'Unsupported', 'Shots')][string]$Mode = 'Flow', [ValidateSet('Dark', 'Light')][string]$Theme = 'Dark', [string]$ShotDir)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 . "$PSScriptRoot\TestHelper.ps1"
@@ -49,6 +49,13 @@ function Install-TabulaApp {
 if ($Mode -eq 'NoWinget') {
 function Get-TabulaWingetPath { $null }
 function Assert-TabulaWinget { $false }
+}
+if ($Mode -eq 'Shots') {
+    # Documentation screenshots: the real catalog and window, but nothing read from this PC. No app counts as installed,
+    # every tweak reads as off, and the log folder shows a neutral path.
+    function Get-TabulaTweakState { param($Tweak, $Profile) [pscustomobject]@{ State = 'Unset'; Reason = '' } }
+    $env:LOCALAPPDATA = 'C:\Users\you\AppData\Local'
+    $script:TabulaBuild = @{ Version = '0.1.0'; Built = '2026-11-24'; Commit = 'dab9c8f' }
 }
 }   # Mode Real keeps the real profile, winget and catalog: dry run only, read-only checks
 
@@ -202,6 +209,24 @@ if ($Mode -eq 'Flow') {
         $script:result.closedByRun = $true
     } { $false }
 }
+elseif ($Mode -eq 'Shots') {
+    # Each page takes two steps: switch and wait out the 150 ms page transition, then render.
+    $script:steps.Add(@{ Name = 'home'; Do = { Click 'BtnRunBack'; Set-TabulaStatus 'Ready.'; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-Setup'; Do = { Save-Shot 'Setup' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'plan'; Do = { Click 'BtnSetup'; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-Plan'; Do = { Save-Shot 'Plan' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'apps'; Do = { $script:TabulaUi.NavApps.IsChecked = $true; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 -and (& $idle) }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-Apps'; Do = { Save-Shot 'Apps' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'tweaks'; Do = { $script:TabulaUi.NavTweaks.IsChecked = $true; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 -and (& $idle) }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-Tweaks'; Do = { Save-Shot 'Tweaks' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'tweaks-exp'; Do = { $script:TabulaUi.ExperimentalExpander.IsExpanded = $true; $script:TabulaUi.Window.UpdateLayout(); $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 500 }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-TweaksExp'; Do = { Save-Shot 'TweaksExp' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'tools'; Do = { $script:TabulaUi.NavTools.IsChecked = $true; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-Tools'; Do = { Save-Shot 'Tools' }; Until = { $true }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'about'; Do = { $script:TabulaUi.NavAbout.IsChecked = $true; $script:mark = [DateTime]::UtcNow }; Until = { ([DateTime]::UtcNow - $script:mark).TotalMilliseconds -gt 700 }; Started = $false; T0 = $null })
+    $script:steps.Add(@{ Name = 'shot-About'; Do = { Save-Shot 'About' }; Until = { $true }; Started = $false; T0 = $null })
+    Add-Step 'end' { $script:TabulaUi.Window.Close() }
+}
 elseif ($Mode -eq 'NoWinget') {
     Add-Step 'rows' { $script:result.steps.appStatus = @($script:TabulaUi.AppRows | ForEach-Object { '{0}={1}' -f $_.Id, $_.Status }) }
     Add-Step 'back-1' { Click 'BtnRunBack'; Click 'BtnSetup' } { $script:TabulaUi.PlanView.Visibility -eq 'Visible' }
@@ -265,7 +290,7 @@ $onReady = {
         })
     $t.Start()
 }
-$cfgArgs = if ($Mode -eq 'Real') { @{} } else { @{ ConfigRoot = $cfgDir } }
+$cfgArgs = if ($Mode -in 'Real', 'Shots') { @{} } else { @{ ConfigRoot = $cfgDir } }
 Show-TabulaWindow -Theme $Theme -OnReady $onReady -AutoCloseMs 120000 @cfgArgs
 $script:hTimer.Stop()
 $script:result.logFileText = [IO.File]::ReadAllText($script:logFile)
