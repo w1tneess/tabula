@@ -28,7 +28,7 @@ CI checks syntax and logic, not Windows behaviour.
 
 ## Install
 
-Tabula is one file, attached to each GitHub release together with its SHA-256. Releases are at `github.com/w1tneess/tabula/releases`. The repository is private for now, so these commands only work for people who can see it until it is made public.
+Tabula is one file, attached to each GitHub release together with its SHA-256. Releases are at `github.com/w1tneess/tabula/releases`.
 
 Look first, run second. Download, check the hash, preview with a dry run, then run it:
 
