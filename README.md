@@ -33,6 +33,7 @@ Tabula is one file, attached to each GitHub release together with its SHA-256. R
 Look first, run second. Download, check the hash, preview with a dry run, then run it:
 
 ```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12   # older Windows PowerShell 5.1 setups otherwise fail with "connection closed unexpectedly"
 $u = 'https://github.com/w1tneess/tabula/releases/latest/download'
 Invoke-WebRequest "$u/tabula.ps1" -OutFile tabula.ps1
 Invoke-WebRequest "$u/tabula.ps1.sha256" -OutFile tabula.ps1.sha256
@@ -44,7 +45,7 @@ powershell -STA -ExecutionPolicy Bypass -File .\tabula.ps1
 One-liner, which runs the script without reading it first:
 
 ```powershell
-irm https://github.com/w1tneess/tabula/releases/latest/download/tabula.ps1 | iex
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://github.com/w1tneess/tabula/releases/latest/download/tabula.ps1 | iex
 ```
 
 Changing the PC needs an elevated Windows PowerShell. A dry run and the window's read-only views do not.
